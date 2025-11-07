@@ -127,12 +127,61 @@ const ImovelDetalhes = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
-            <div>
-              <p className="text-sm text-muted-foreground">Endereço</p>
-              <p className="font-medium text-lg">{imovel.endereco}</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {imovel.rua && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Rua/Avenida/Logradouro</p>
+                  <p className="font-medium">{imovel.rua}</p>
+                </div>
+              </div>
+            )}
+            {imovel.numero && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Número</p>
+                  <p className="font-medium">{imovel.numero}</p>
+                </div>
+              </div>
+            )}
+            {imovel.bairro && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Bairro</p>
+                  <p className="font-medium">{imovel.bairro}</p>
+                </div>
+              </div>
+            )}
+            {imovel.cidade && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Cidade</p>
+                  <p className="font-medium">{imovel.cidade}</p>
+                </div>
+              </div>
+            )}
+            {imovel.estado && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Estado</p>
+                  <p className="font-medium">{imovel.estado}</p>
+                </div>
+              </div>
+            )}
+            {imovel.cep && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                <div>
+                  <p className="text-sm text-muted-foreground">CEP</p>
+                  <p className="font-medium">{imovel.cep}</p>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
@@ -156,6 +205,13 @@ const ImovelDetalhes = () => {
                 </Button>
               </div>
             )}
+          </div>
+
+          <div className="pt-4 border-t">
+            <div>
+              <p className="text-sm text-muted-foreground">Publicado na Internet</p>
+              <p className="font-medium">{imovel.publicado_internet ? 'Sim' : 'Não'}</p>
+            </div>
           </div>
 
           {imovel.observacoes && (
