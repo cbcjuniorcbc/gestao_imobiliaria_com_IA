@@ -34,7 +34,10 @@ export function AppSidebar() {
   ];
 
   const adminItems = isAdmin
-    ? [{ title: "Configurações", url: "/configuracoes", icon: SettingsIcon }]
+    ? [
+        { title: "Relatórios", url: "/relatorios", icon: FileText },
+        { title: "Configurações", url: "/configuracoes", icon: SettingsIcon }
+      ]
     : [];
 
   const handleLogout = () => {

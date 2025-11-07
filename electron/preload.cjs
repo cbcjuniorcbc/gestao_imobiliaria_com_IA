@@ -40,9 +40,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Documentos
   getDocumentosByOwner: (data) => ipcRenderer.invoke('documentos:getByOwner', data),
   uploadDocumento: (data) => ipcRenderer.invoke('documentos:upload', data),
+  downloadDocumento: (documentoId) => ipcRenderer.invoke('documentos:download', { documentoId }),
   
   // Logs
   getLogs: () => ipcRenderer.invoke('logs:getAll'),
+  getLogsByDateRange: (startDate, endDate) => ipcRenderer.invoke('logs:getByDateRange', { startDate, endDate }),
+  
+  // Database status
+  getDatabaseStatus: () => ipcRenderer.invoke('database:getStatus'),
   
   // Contratos Avulsos
   getContratosAvulsos: () => ipcRenderer.invoke('contratos_avulsos:getAll'),

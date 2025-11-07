@@ -46,9 +46,14 @@ declare global {
       // Documentos
       getDocumentosByOwner: (data: { ownerType: string; ownerId: string }) => Promise<any>;
       uploadDocumento: (data: any) => Promise<any>;
+      downloadDocumento: (documentoId: string) => Promise<any>;
       
       // Logs
       getLogs: () => Promise<any>;
+      getLogsByDateRange: (startDate: string, endDate: string) => Promise<any>;
+      
+      // Database status
+      getDatabaseStatus: () => Promise<any>;
       
       // Contratos Avulsos
       getContratosAvulsos: () => Promise<any>;

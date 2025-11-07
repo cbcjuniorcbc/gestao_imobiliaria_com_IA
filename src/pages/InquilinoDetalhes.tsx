@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Inquilino, Boleto, Documento } from '@/types';
 import { mockInquilinos, mockBoletos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 
 const InquilinoDetalhes = () => {
   const navigate = useNavigate();
@@ -82,6 +83,31 @@ const InquilinoDetalhes = () => {
       return { tipo: 'atrasado', dias: Math.abs(diff) };
     } else {
       return { tipo: 'avencer', dias: diff };
+    }
+  };
+
+  const handleDownloadDocument = async (documentoId: string, filename: string) => {
+    try {
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).downloadDocumento(documentoId);
+        if (result.success) {
+          const blob = new Blob([new Uint8Array(result.data.buffer)]);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          sonnerToast.success('Download realizado com sucesso!');
+        } else {
+          sonnerToast.error(result.error || 'Erro ao fazer download');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao fazer download:', error);
+      sonnerToast.error('Erro ao fazer download do documento');
     }
   };
 
@@ -210,11 +236,24 @@ const InquilinoDetalhes = () => {
           <CardContent>
             <div className="space-y-2">
               {documentos.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <span className="font-medium">{doc.filename}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
-                  </span>
+                <div key={doc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <div>
+                      <span className="font-medium block">{doc.filename}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadDocument(doc.id, doc.filename)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
                 </div>
               ))}
             </div>

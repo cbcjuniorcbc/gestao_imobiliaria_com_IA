@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Download, FileText } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Proprietario, Imovel } from '@/types';
 import { mockProprietarios, mockImoveis } from '@/lib/mockData';
+import { toast } from 'sonner';
 
 const ProprietarioDetalhes = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [proprietario, setProprietario] = useState<Proprietario | null>(null);
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
+  const [documentos, setDocumentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,7 +20,7 @@ const ProprietarioDetalhes = () => {
   }, [id]);
 
   const loadData = async () => {
-    if (window.electronAPI?.getProprietarios && window.electronAPI?.getImoveisByProprietario) {
+    if (window.electronAPI?.getProprietarios && window.electronAPI?.getImoveisByProprietario && window.electronAPI?.getDocumentosByOwner) {
       const propResult = await window.electronAPI.getProprietarios();
       if (propResult.success) {
         const prop = propResult.data.find((p: Proprietario) => p.id === id);
@@ -29,6 +31,11 @@ const ProprietarioDetalhes = () => {
       if (imoveisResult.success) {
         setImoveis(imoveisResult.data);
       }
+
+      const docsResult = await window.electronAPI.getDocumentosByOwner({ ownerType: 'proprietario', ownerId: id || '' });
+      if (docsResult.success) {
+        setDocumentos(docsResult.data);
+      }
     } else {
       // Fallback para mock
       const prop = mockProprietarios.find(p => p.id === id);
@@ -36,6 +43,31 @@ const ProprietarioDetalhes = () => {
       setImoveis(mockImoveis.filter(i => i.proprietario_id === id));
     }
     setLoading(false);
+  };
+
+  const handleDownloadDocument = async (documentoId: string, filename: string) => {
+    try {
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).downloadDocumento(documentoId);
+        if (result.success) {
+          const blob = new Blob([new Uint8Array(result.data.buffer)]);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          toast.success('Download realizado com sucesso!');
+        } else {
+          toast.error(result.error || 'Erro ao fazer download');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao fazer download:', error);
+      toast.error('Erro ao fazer download do documento');
+    }
   };
 
   const getSituacaoColor = (situacao: string) => {
@@ -124,6 +156,37 @@ const ProprietarioDetalhes = () => {
           )}
         </CardContent>
       </Card>
+
+      {documentos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Documentos ({documentos.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {documentos.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <span className="text-sm">{doc.filename}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadDocument(doc.id, doc.filename)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-4">

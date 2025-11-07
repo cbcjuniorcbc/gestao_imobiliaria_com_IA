@@ -607,12 +607,89 @@ ipcMain.handle('documentos:getByOwner', async (event, { ownerType, ownerId }) =>
   }
 });
 
+// Download de documento
+ipcMain.handle('documentos:download', async (event, { documentoId }) => {
+  try {
+    const result = db.exec('SELECT * FROM documentos WHERE id = ?', [documentoId]);
+    const docs = resultToArray(result);
+    
+    if (docs.length === 0) {
+      return { success: false, error: 'Documento não encontrado' };
+    }
+    
+    const doc = docs[0];
+    const filePath = path.join(rootPath, doc.file_path);
+    
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'Arquivo não encontrado no sistema' };
+    }
+    
+    // Ler arquivo
+    const fileData = fs.readFileSync(filePath);
+    
+    // Retornar dados do arquivo
+    return { 
+      success: true, 
+      data: {
+        filename: doc.filename,
+        buffer: Array.from(fileData)
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Logs
 ipcMain.handle('logs:getAll', async () => {
   try {
-    const result = db.exec('SELECT * FROM logs_acoes ORDER BY timestamp DESC LIMIT 100');
+    const result = db.exec('SELECT * FROM logs_acoes ORDER BY timestamp DESC LIMIT 1000');
     const logs = resultToArray(result);
     return { success: true, data: logs };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Logs com filtro de data
+ipcMain.handle('logs:getByDateRange', async (event, { startDate, endDate }) => {
+  try {
+    const result = db.exec(
+      `SELECT * FROM logs_acoes 
+       WHERE date(timestamp) >= date(?) AND date(timestamp) <= date(?)
+       ORDER BY timestamp DESC`,
+      [startDate, endDate]
+    );
+    const logs = resultToArray(result);
+    return { success: true, data: logs };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Verificar status do banco (se está em modo somente leitura)
+ipcMain.handle('database:getStatus', async () => {
+  try {
+    const isReadOnly = fs.existsSync(lockFilePath);
+    let lockInfo = null;
+    
+    if (isReadOnly) {
+      const lockContent = fs.readFileSync(lockFilePath, 'utf8');
+      const lines = lockContent.split('\n');
+      lockInfo = {
+        username: lines[0],
+        pid: lines[1],
+        timestamp: lines[2]
+      };
+    }
+    
+    return { 
+      success: true, 
+      data: { 
+        isReadOnly,
+        lockInfo
+      } 
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }

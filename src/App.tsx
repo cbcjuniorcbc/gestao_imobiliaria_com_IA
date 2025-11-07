@@ -24,6 +24,7 @@ import ImovelDetalhes from "./pages/ImovelDetalhes";
 import InquilinoDetalhes from "./pages/InquilinoDetalhes";
 import Boletos from "./pages/Boletos";
 import ContratosAvulsos from "./pages/ContratosAvulsos";
+import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
@@ -70,6 +71,7 @@ const AppContent = () => {
               <Route path="/inquilinos/:inquilinoId/boleto/novo" element={<ProtectedRoute><NovoBoleto /></ProtectedRoute>} />
               <Route path="/boletos" element={<ProtectedRoute><Boletos /></ProtectedRoute>} />
               <Route path="/contratos-avulsos" element={<ProtectedRoute><ContratosAvulsos /></ProtectedRoute>} />
+              <Route path="/relatorios" element={<ProtectedRoute adminOnly><Relatorios /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute adminOnly><Configuracoes /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

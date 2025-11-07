@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,26 @@ import { ArrowLeft, Search, Plus, Mail, Phone, MapPin } from 'lucide-react';
 const Proprietarios = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [proprietarios, setProprietarios] = useState(mockProprietarios);
+  const [loading, setLoading] = useState(true);
 
-  const filteredProprietarios = mockProprietarios.filter(p =>
+  useEffect(() => {
+    loadProprietarios();
+  }, []);
+
+  const loadProprietarios = async () => {
+    if (window.electronAPI?.getProprietarios) {
+      const result = await window.electronAPI.getProprietarios();
+      if (result.success) {
+        setProprietarios(result.data);
+      }
+    } else {
+      setProprietarios(mockProprietarios);
+    }
+    setLoading(false);
+  };
+
+  const filteredProprietarios = proprietarios.filter(p =>
     p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.cpf_cnpj.includes(searchTerm) ||
     p.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -49,7 +67,12 @@ const Proprietarios = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Carregando proprietários...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProprietarios.map((proprietario) => (
             <Card 
               key={proprietario.id} 
@@ -80,9 +103,10 @@ const Proprietarios = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
-        {filteredProprietarios.length === 0 && (
+        {!loading && filteredProprietarios.length === 0 && (
           <Card className="p-12 text-center">
             <p className="text-muted-foreground">Nenhum proprietário encontrado</p>
           </Card>
