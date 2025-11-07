@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, User } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, User, Edit, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Imovel, Inquilino, Proprietario } from '@/types';
 import { mockImoveis, mockInquilinos, mockProprietarios } from '@/lib/mockData';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ImovelDetalhes = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [proprietario, setProprietario] = useState<Proprietario | null>(null);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
@@ -89,9 +92,31 @@ const ImovelDetalhes = () => {
         <CardHeader>
           <CardTitle className="flex items-start justify-between">
             <span className="text-2xl">{imovel.tipo}</span>
-            <span className={`text-sm px-3 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
-              {imovel.situacao}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm px-3 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
+                {imovel.situacao}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => navigate(`/imoveis/${id}/editar`)}>
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={async () => {
+                if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este imóvel?')) {
+                  const result = await (window.electronAPI as any).deleteImovel({ 
+                    id: imovel.id, 
+                    userId: user.id, 
+                    userName: user.username 
+                  });
+                  if (result.success) {
+                    toast.success('Imóvel removido com sucesso!');
+                    navigate(-1);
+                  } else {
+                    toast.error(result.error || 'Erro ao remover imóvel');
+                  }
+                }
+              }}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -150,13 +175,37 @@ const ImovelDetalhes = () => {
           {inquilinos.map((inquilino) => (
             <Card 
               key={inquilino.id} 
-              className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-              onClick={() => navigate(`/inquilinos/${inquilino.id}`)}
+              className="hover:shadow-lg transition-all"
             >
               <CardHeader>
-                <CardTitle className="text-lg">{inquilino.nome}</CardTitle>
+                <CardTitle className="text-lg flex items-start justify-between">
+                  <span className="cursor-pointer" onClick={() => navigate(`/inquilinos/${inquilino.id}`)}>{inquilino.nome}</span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/inquilinos/${inquilino.id}/editar`); }}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={async (e) => {
+                      e.stopPropagation();
+                      if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este inquilino?')) {
+                        const result = await (window.electronAPI as any).deleteInquilino({ 
+                          id: inquilino.id, 
+                          userId: user.id, 
+                          userName: user.username 
+                        });
+                        if (result.success) {
+                          toast.success('Inquilino removido com sucesso!');
+                          loadData();
+                        } else {
+                          toast.error(result.error || 'Erro ao remover inquilino');
+                        }
+                      }
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 cursor-pointer" onClick={() => navigate(`/inquilinos/${inquilino.id}`)}>
                 <div className="text-sm text-muted-foreground">{inquilino.cpf_cnpj}</div>
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="w-4 h-4 text-muted-foreground" />

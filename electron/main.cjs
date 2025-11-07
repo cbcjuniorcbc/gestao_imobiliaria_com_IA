@@ -301,6 +301,42 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
   }
 });
 
+ipcMain.handle('proprietarios:update', async (event, proprietario) => {
+  try {
+    db.run(
+      `UPDATE proprietarios SET nome = ?, cpf_cnpj = ?, telefone = ?, email = ?, 
+       endereco = ?, metodo_recebimento = ?, observacoes = ?
+       WHERE id = ?`,
+      [proprietario.nome, proprietario.cpf_cnpj, proprietario.telefone, proprietario.email,
+       proprietario.endereco, proprietario.metodo_recebimento || '', proprietario.observacoes || '', proprietario.id]
+    );
+    
+    saveDatabase();
+    logAction(event.sender.id, proprietario.userId, proprietario.userName, 'Edição', `Editou proprietário: ${proprietario.nome}`);
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('proprietarios:delete', async (event, { id, userId, userName }) => {
+  try {
+    const result = db.exec('SELECT nome FROM proprietarios WHERE id = ?', [id]);
+    const props = resultToArray(result);
+    const nome = props[0]?.nome;
+    
+    db.run('DELETE FROM proprietarios WHERE id = ?', [id]);
+    
+    saveDatabase();
+    logAction(event.sender.id, userId, userName, 'Exclusão', `Excluiu proprietário: ${nome}`);
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Imóveis
 ipcMain.handle('imoveis:getAll', async () => {
   try {
@@ -375,13 +411,13 @@ ipcMain.handle('imoveis:update', async (event, imovel) => {
   }
 });
 
-ipcMain.handle('imoveis:delete', async (event, { imovelId, userId, userName }) => {
+ipcMain.handle('imoveis:delete', async (event, { id, userId, userName }) => {
   try {
-    const result = db.exec('SELECT endereco FROM imoveis WHERE id = ?', [imovelId]);
+    const result = db.exec('SELECT endereco FROM imoveis WHERE id = ?', [id]);
     const imoveis = resultToArray(result);
     const endereco = imoveis[0]?.endereco;
     
-    db.run('DELETE FROM imoveis WHERE id = ?', [imovelId]);
+    db.run('DELETE FROM imoveis WHERE id = ?', [id]);
     
     saveDatabase();
     logAction(event.sender.id, userId, userName, 'Exclusão', `Excluiu imóvel: ${endereco}`);
@@ -469,11 +505,11 @@ ipcMain.handle('inquilinos:update', async (event, inquilino) => {
        WHERE id = ?`,
       [inquilino.nome, inquilino.cpf || '', inquilino.rg || '', inquilino.cpf_cnpj, 
        inquilino.telefone, inquilino.email, inquilino.renda_aproximada, inquilino.data_inicio,
-       inquilino.data_termino || '', inquilino.observacoes || '', inquilino.id]
+       inquilino.data_termino || null, inquilino.observacoes || '', inquilino.id]
     );
     
     saveDatabase();
-    logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Edição', `Editou inquilino: ${inquilino.nome}`);
+    logAction(event.sender.id, inquilino.userId, inquilino.userName, 'Edição', `Editou inquilino: ${inquilino.nome}`);
     
     return { success: true };
   } catch (error) {

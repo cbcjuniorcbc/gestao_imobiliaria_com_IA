@@ -105,10 +105,14 @@ const Proprietarios = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProprietarios.map((proprietario) => (
-            <Card key={proprietario.id} className="hover:shadow-lg transition-all">
+            <Card 
+              key={proprietario.id} 
+              className="hover:shadow-lg transition-all cursor-pointer"
+              onClick={() => navigate(`/proprietarios/${proprietario.id}`)}
+            >
               <CardHeader>
                 <CardTitle className="flex items-start justify-between">
-                  <span className="text-lg cursor-pointer" onClick={() => navigate(`/proprietarios/${proprietario.id}`)}>{proprietario.nome}</span>
+                  <span className="text-lg">{proprietario.nome}</span>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/proprietarios/${proprietario.id}/editar`); }}>
                       <Edit className="w-4 h-4" />

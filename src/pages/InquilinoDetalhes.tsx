@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download, Edit, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Inquilino, Boleto, Documento } from '@/types';
 import { mockInquilinos, mockBoletos } from '@/lib/mockData';
@@ -142,9 +142,33 @@ const InquilinoDetalhes = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-start justify-between">
-            <span className="text-2xl">{inquilino.nome}</span>
-            <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-3 py-1 rounded">
-              {inquilino.cpf_cnpj}
+            <div className="flex flex-col gap-2">
+              <span className="text-2xl">{inquilino.nome}</span>
+              <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-3 py-1 rounded w-fit">
+                {inquilino.cpf_cnpj}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" onClick={() => navigate(`/inquilinos/${id}/editar`)}>
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={async () => {
+                if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este inquilino?')) {
+                  const result = await (window.electronAPI as any).deleteInquilino({ 
+                    id: inquilino.id, 
+                    userId: user.id, 
+                    userName: user.username 
+                  });
+                  if (result.success) {
+                    sonnerToast.success('Inquilino removido com sucesso!');
+                    navigate('/inquilinos');
+                  } else {
+                    sonnerToast.error(result.error || 'Erro ao remover inquilino');
+                  }
+                }
+              }}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>

@@ -13,9 +13,12 @@ import Dashboard from "./pages/Dashboard";
 import Proprietarios from "./pages/Proprietarios";
 import ProprietarioDetalhes from "./pages/ProprietarioDetalhes";
 import NovoProprietario from "./pages/NovoProprietario";
+import EditarProprietario from "./pages/EditarProprietario";
 import NovoImovel from "./pages/NovoImovel";
+import EditarImovel from "./pages/EditarImovel";
 import Inquilinos from "./pages/Inquilinos";
 import NovoInquilino from "./pages/NovoInquilino";
+import EditarInquilino from "./pages/EditarInquilino";
 import NovoBoleto from "./pages/NovoBoleto";
 import ImoveisAluguel from "./pages/ImoveisAluguel";
 import ImoveisVenda from "./pages/ImoveisVenda";
@@ -60,14 +63,17 @@ const AppContent = () => {
               <Route path="/proprietarios" element={<ProtectedRoute><Proprietarios /></ProtectedRoute>} />
               <Route path="/proprietarios/novo" element={<ProtectedRoute><NovoProprietario /></ProtectedRoute>} />
               <Route path="/proprietarios/:id" element={<ProtectedRoute><ProprietarioDetalhes /></ProtectedRoute>} />
+              <Route path="/proprietarios/:id/editar" element={<ProtectedRoute><EditarProprietario /></ProtectedRoute>} />
               <Route path="/proprietarios/:proprietarioId/imoveis/novo" element={<ProtectedRoute><NovoImovel /></ProtectedRoute>} />
               <Route path="/imoveis/aluguel" element={<ProtectedRoute><ImoveisAluguel /></ProtectedRoute>} />
               <Route path="/imoveis/venda" element={<ProtectedRoute><ImoveisVenda /></ProtectedRoute>} />
               <Route path="/imoveis/ponto-comercial" element={<ProtectedRoute><ImoveisPontoComercial /></ProtectedRoute>} />
               <Route path="/imoveis/:id" element={<ProtectedRoute><ImovelDetalhes /></ProtectedRoute>} />
+              <Route path="/imoveis/:id/editar" element={<ProtectedRoute><EditarImovel /></ProtectedRoute>} />
               <Route path="/imoveis/:imovelId/inquilinos/novo" element={<ProtectedRoute><NovoInquilino /></ProtectedRoute>} />
               <Route path="/inquilinos" element={<ProtectedRoute><Inquilinos /></ProtectedRoute>} />
               <Route path="/inquilinos/:id" element={<ProtectedRoute><InquilinoDetalhes /></ProtectedRoute>} />
+              <Route path="/inquilinos/:id/editar" element={<ProtectedRoute><EditarInquilino /></ProtectedRoute>} />
               <Route path="/inquilinos/:inquilinoId/boleto/novo" element={<ProtectedRoute><NovoBoleto /></ProtectedRoute>} />
               <Route path="/boletos" element={<ProtectedRoute><Boletos /></ProtectedRoute>} />
               <Route path="/contratos-avulsos" element={<ProtectedRoute><ContratosAvulsos /></ProtectedRoute>} />

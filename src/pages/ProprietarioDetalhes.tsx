@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, Building2, Download, FileText } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Download, FileText, Edit, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Proprietario, Imovel } from '@/types';
 import { mockProprietarios, mockImoveis } from '@/lib/mockData';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ProprietarioDetalhes = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const [proprietario, setProprietario] = useState<Proprietario | null>(null);
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [documentos, setDocumentos] = useState<any[]>([]);
@@ -110,9 +112,33 @@ const ProprietarioDetalhes = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-start justify-between">
-            <span className="text-2xl">{proprietario.nome}</span>
-            <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-3 py-1 rounded">
-              {proprietario.cpf_cnpj}
+            <div className="flex flex-col gap-2">
+              <span className="text-2xl">{proprietario.nome}</span>
+              <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-3 py-1 rounded w-fit">
+                {proprietario.cpf_cnpj}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" onClick={() => navigate(`/proprietarios/${id}/editar`)}>
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={async () => {
+                if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este proprietário?')) {
+                  const result = await (window.electronAPI as any).deleteProprietario({ 
+                    id: proprietario.id, 
+                    userId: user.id, 
+                    userName: user.username 
+                  });
+                  if (result.success) {
+                    toast.success('Proprietário removido com sucesso!');
+                    navigate('/proprietarios');
+                  } else {
+                    toast.error(result.error || 'Erro ao remover proprietário');
+                  }
+                }
+              }}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -203,18 +229,40 @@ const ProprietarioDetalhes = () => {
           {imoveis.map((imovel) => (
             <Card 
               key={imovel.id} 
-              className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-              onClick={() => navigate(`/imoveis/${imovel.id}`)}
+              className="hover:shadow-lg transition-all"
             >
               <CardHeader>
                 <CardTitle className="text-lg flex items-start justify-between">
-                  <span>{imovel.tipo}</span>
-                  <span className={`text-xs px-2 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
-                    {imovel.situacao}
-                  </span>
+                  <span className="cursor-pointer" onClick={() => navigate(`/imoveis/${imovel.id}`)}>{imovel.tipo}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
+                      {imovel.situacao}
+                    </span>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/imoveis/${imovel.id}/editar`); }}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={async (e) => {
+                      e.stopPropagation();
+                      if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este imóvel?')) {
+                        const result = await (window.electronAPI as any).deleteImovel({ 
+                          id: imovel.id, 
+                          userId: user.id, 
+                          userName: user.username 
+                        });
+                        if (result.success) {
+                          toast.success('Imóvel removido com sucesso!');
+                          loadData();
+                        } else {
+                          toast.error(result.error || 'Erro ao remover imóvel');
+                        }
+                      }
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 cursor-pointer" onClick={() => navigate(`/imoveis/${imovel.id}`)}>
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <span className="text-sm">{imovel.endereco}</span>
