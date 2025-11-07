@@ -49,55 +49,66 @@ npm install better-sqlite3 bcrypt
 
 ## 🔧 Passo 2: Configurar package.json
 
-Adicione/modifique estas seções no `package.json`:
+**IMPORTANTE:** Não apague nada do `package.json` existente! Apenas adicione/modifique as seções abaixo.
+
+### 2.1 - Adicionar campos no topo (antes de "scripts"):
+
+Abra o `package.json` e adicione estas linhas logo após o campo `"type": "module",`:
 
 ```json
-{
-  "name": "gestao-imobiliaria",
-  "version": "1.0.0",
-  "description": "Sistema de Gestão Imobiliária Desktop",
-  "main": "electron/main.js",
-  "homepage": "./",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "electron:dev": "concurrently \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:8080 && electron .\"",
-    "electron:build": "npm run build && electron-builder --win nsis",
-    "electron:build:portable": "npm run build && electron-builder --win portable",
-    "postinstall": "electron-builder install-app-deps"
+"main": "electron/main.js",
+"homepage": "./",
+```
+
+### 2.2 - Adicionar novos scripts na seção "scripts":
+
+Dentro da seção `"scripts"`, adicione estas novas linhas (mantenha os scripts existentes como `dev`, `build`, `lint`):
+
+```json
+"electron:dev": "concurrently \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:8080 && electron .\"",
+"electron:build": "npm run build && electron-builder --win nsis",
+"electron:build:portable": "npm run build && electron-builder --win portable",
+"postinstall": "electron-builder install-app-deps"
+```
+
+### 2.3 - Adicionar configuração do electron-builder (no final do arquivo):
+
+Adicione esta seção completa no final do `package.json`, antes da última chave `}`:
+
+```json
+"build": {
+  "appId": "com.gestao.imobiliaria",
+  "productName": "Gestão Imobiliária",
+  "win": {
+    "target": ["nsis", "portable"],
+    "icon": "build/icon.ico"
   },
-  "build": {
-    "appId": "com.gestao.imobiliaria",
-    "productName": "Gestão Imobiliária",
-    "win": {
-      "target": ["nsis", "portable"],
-      "icon": "build/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Gestão Imobiliária"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "database/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "database",
-        "to": "database"
-      }
-    ],
-    "directories": {
-      "buildResources": "build",
-      "output": "release"
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Gestão Imobiliária"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "database/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "database",
+      "to": "database"
     }
+  ],
+  "directories": {
+    "buildResources": "build",
+    "output": "release"
   }
 }
 ```
+
+**Resultado final:** Seu `package.json` deve manter todas as dependências e devDependencies existentes, apenas com os novos campos e scripts adicionados.
 
 ---
 
