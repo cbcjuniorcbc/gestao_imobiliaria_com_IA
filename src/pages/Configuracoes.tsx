@@ -193,14 +193,17 @@ const Configuracoes = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="nova-senha">Senha</Label>
+                    <Label htmlFor="nova-senha">Senha (opcional)</Label>
                     <Input
                       id="nova-senha"
                       type="password"
                       value={novaSenha}
                       onChange={(e) => setNovaSenha(e.target.value)}
-                      required
+                      placeholder="Deixe em branco para sem senha"
                     />
+                    <p className="text-sm text-muted-foreground">
+                      Se deixar em branco, o usuário poderá fazer login sem senha
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="novo-role">Função</Label>
