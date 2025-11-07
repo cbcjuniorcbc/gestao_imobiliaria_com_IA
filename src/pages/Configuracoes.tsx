@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Settings, Users, Lock } from 'lucide-react';
 
 interface Usuario {
-  id: number;
+  id: string;
   username: string;
   role: string;
   created_at: string;
@@ -28,7 +28,7 @@ const Configuracoes = () => {
   const [novoRole, setNovoRole] = useState('recepcao');
 
   // Formulário alterar senha
-  const [senhaUsuarioId, setSenhaUsuarioId] = useState<number | null>(null);
+  const [senhaUsuarioId, setSenhaUsuarioId] = useState<string | null>(null);
   const [senhaAtual, setSenhaAtual] = useState('');
   const [senhaNova, setSenhaNova] = useState('');
   const [senhaConfirma, setSenhaConfirma] = useState('');
@@ -40,7 +40,7 @@ const Configuracoes = () => {
   const carregarUsuarios = async () => {
     if (window.electronAPI) {
       const result = await window.electronAPI.getUsuarios();
-      if (result.success) {
+      if (result.success && result.users) {
         setUsuarios(result.users);
       }
     }
@@ -262,15 +262,15 @@ const Configuracoes = () => {
                 <div className="space-y-2">
                   <Label htmlFor="usuario-senha">Usuário</Label>
                   <Select
-                    value={senhaUsuarioId?.toString() || ''}
-                    onValueChange={(value) => setSenhaUsuarioId(Number(value))}
+                    value={senhaUsuarioId || ''}
+                    onValueChange={(value) => setSenhaUsuarioId(value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um usuário" />
                     </SelectTrigger>
                     <SelectContent>
                       {usuarios.map((usuario) => (
-                        <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                        <SelectItem key={usuario.id} value={usuario.id}>
                           {usuario.username}
                         </SelectItem>
                       ))}

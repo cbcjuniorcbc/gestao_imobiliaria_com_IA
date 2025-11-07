@@ -27,18 +27,44 @@ function checkDatabaseLock() {
   lockFilePath = path.join(rootPath, '.db.lock');
   
   if (fs.existsSync(lockFilePath)) {
-    const response = dialog.showMessageBoxSync({
-      type: 'warning',
-      buttons: ['Cancelar', 'Forçar Abertura (Admin)'],
-      defaultId: 0,
-      title: 'Banco de Dados em Uso',
-      message: 'ATENÇÃO: Este banco de dados já está aberto em outra instância.',
-      detail: 'Abrir simultaneamente pode corromper os dados. Recomendamos fechar a outra instância primeiro.\n\nApenas administradores devem forçar a abertura.'
-    });
-    
-    if (response === 0) {
-      app.quit();
-      return false;
+    try {
+      // Ler o PID do processo que criou o lock
+      const lockContent = fs.readFileSync(lockFilePath, 'utf8');
+      const lines = lockContent.split('\n');
+      const lockPid = parseInt(lines[1]);
+      
+      // Verificar se o processo ainda está rodando
+      let processRunning = false;
+      try {
+        process.kill(lockPid, 0); // Signal 0 apenas verifica se o processo existe
+        processRunning = true;
+      } catch (e) {
+        processRunning = false;
+      }
+      
+      if (processRunning) {
+        // Processo ainda está rodando - perguntar ao usuário
+        const response = dialog.showMessageBoxSync({
+          type: 'warning',
+          buttons: ['Cancelar', 'Forçar Abertura (Admin)'],
+          defaultId: 0,
+          title: 'Banco de Dados em Uso',
+          message: 'ATENÇÃO: Este banco de dados já está aberto em outra instância.',
+          detail: 'Abrir simultaneamente pode corromper os dados. Recomendamos fechar a outra instância primeiro.\n\nApenas administradores devem forçar a abertura.'
+        });
+        
+        if (response === 0) {
+          app.quit();
+          return false;
+        }
+      } else {
+        // Processo não está mais rodando - remover lock antigo automaticamente
+        fs.unlinkSync(lockFilePath);
+      }
+    } catch (error) {
+      // Se houver erro ao ler o lock, remove o arquivo e continua
+      console.log('Removendo lock antigo...');
+      fs.unlinkSync(lockFilePath);
     }
   }
   
