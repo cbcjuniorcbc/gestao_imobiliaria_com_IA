@@ -11,6 +11,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Função para detectar se está rodando no Electron
+const isElectron = () => {
+  return typeof window !== 'undefined' && window.electronAPI !== undefined;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
@@ -23,27 +28,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Mock de autenticação - em produção será substituído por Electron IPC
-    // Senhas: admin123 e recep123
-    const validCredentials = [
-      { username: 'admin', password: 'admin123' },
-      { username: 'recep', password: 'recep123' }
-    ];
-
-    const isValid = validCredentials.some(
-      cred => cred.username === username && cred.password === password
-    );
-
-    if (isValid) {
-      const foundUser = mockUsers.find(u => u.username === username);
-      if (foundUser) {
-        setUser(foundUser);
-        localStorage.setItem('currentUser', JSON.stringify(foundUser));
+    if (isElectron()) {
+      // Usar Electron IPC quando disponível
+      const result = await window.electronAPI!.login({ username, password });
+      if (result.success && result.user) {
+        setUser(result.user);
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
         return true;
       }
-    }
+      return false;
+    } else {
+      // Fallback para mock (desenvolvimento web)
+      const validCredentials = [
+        { username: 'admin', password: 'admin123' },
+        { username: 'recep', password: 'recep123' }
+      ];
 
-    return false;
+      const isValid = validCredentials.some(
+        cred => cred.username === username && cred.password === password
+      );
+
+      if (isValid) {
+        const foundUser = mockUsers.find(u => u.username === username);
+        if (foundUser) {
+          setUser(foundUser);
+          localStorage.setItem('currentUser', JSON.stringify(foundUser));
+          return true;
+        }
+      }
+
+      return false;
+    }
   };
 
   const logout = () => {
