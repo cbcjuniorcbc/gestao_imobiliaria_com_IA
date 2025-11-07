@@ -59,4 +59,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Configurações
   selectRootPath: () => ipcRenderer.invoke('config:selectRootPath'),
+  getDbPath: () => ipcRenderer.invoke('config:getDbPath'),
+  selectDbFolder: () => ipcRenderer.invoke('config:selectDbFolder'),
+  restartApp: () => ipcRenderer.invoke('config:restartApp'),
 });

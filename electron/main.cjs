@@ -12,6 +12,21 @@ let lockFilePath;
 // Definir pasta raiz padrão (pode ser alterada pelo admin)
 function getDefaultRootPath() {
   const userDataPath = app.getPath('userData');
+  const configPath = path.join(userDataPath, 'db-config.json');
+  
+  // Verificar se existe configuração personalizada
+  if (fs.existsSync(configPath)) {
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (config.dbPath && fs.existsSync(config.dbPath)) {
+        return config.dbPath;
+      }
+    } catch (error) {
+      console.log('Erro ao ler configuração do banco:', error);
+    }
+  }
+  
+  // Usar pasta padrão se não houver configuração
   const defaultPath = path.join(userDataPath, 'GestaoImobiliariaData');
   
   // Criar pasta se não existir
@@ -20,6 +35,20 @@ function getDefaultRootPath() {
   }
   
   return defaultPath;
+}
+
+// Salvar novo caminho do banco
+function saveDbPath(newPath) {
+  const userDataPath = app.getPath('userData');
+  const configPath = path.join(userDataPath, 'db-config.json');
+  
+  try {
+    fs.writeFileSync(configPath, JSON.stringify({ dbPath: newPath }, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Erro ao salvar configuração do banco:', error);
+    return false;
+  }
 }
 
 // Verificar e criar arquivo de lock
@@ -865,6 +894,55 @@ ipcMain.handle('config:selectRootPath', async () => {
   }
   
   return { success: false };
+});
+
+// Obter caminho atual do banco de dados
+ipcMain.handle('config:getDbPath', async () => {
+  return rootPath;
+});
+
+// Selecionar nova pasta para o banco de dados
+ipcMain.handle('config:selectDbFolder', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Selecionar Pasta para o Banco de Dados',
+      message: 'Escolha onde os dados serão salvos (pode ser uma pasta do Google Drive)'
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'Seleção cancelada' };
+    }
+    
+    const selectedPath = result.filePaths[0];
+    
+    // Criar subpasta GestaoImobiliariaData dentro da pasta selecionada
+    const newDbPath = path.join(selectedPath, 'GestaoImobiliariaData');
+    
+    // Criar pasta se não existir
+    if (!fs.existsSync(newDbPath)) {
+      fs.mkdirSync(newDbPath, { recursive: true });
+    }
+    
+    // Salvar nova configuração
+    if (saveDbPath(newDbPath)) {
+      // Reiniciar aplicação
+      app.relaunch();
+      app.quit();
+      return { success: true, path: newDbPath };
+    } else {
+      return { success: false, error: 'Erro ao salvar configuração' };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Reiniciar aplicação
+ipcMain.handle('config:restartApp', async () => {
+  app.relaunch();
+  app.quit();
+  return { success: true };
 });
 
 // ========================================

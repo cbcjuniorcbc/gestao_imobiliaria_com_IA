@@ -7,9 +7,10 @@ import { Imovel } from '@/types';
 interface ImovelCardProps {
   imovel: Imovel;
   onDelete: (id: string) => void;
+  isAdmin: boolean;
 }
 
-export const ImovelCard = ({ imovel, onDelete }: ImovelCardProps) => {
+export const ImovelCard = ({ imovel, onDelete, isAdmin }: ImovelCardProps) => {
   const navigate = useNavigate();
 
   const getSituacaoColor = (situacao: string) => {
@@ -42,9 +43,11 @@ export const ImovelCard = ({ imovel, onDelete }: ImovelCardProps) => {
             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/imoveis/${imovel.id}/editar`); }}>
               <Edit className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(imovel.id); }}>
-              <Trash2 className="w-4 h-4 text-destructive" />
-            </Button>
+            {isAdmin && (
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(imovel.id); }}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            )}
           </div>
         </CardTitle>
       </CardHeader>

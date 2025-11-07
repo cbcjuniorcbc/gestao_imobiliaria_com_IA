@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Users, Lock } from 'lucide-react';
+import { Settings, Users, Lock, Database } from 'lucide-react';
 
 interface Usuario {
   id: string;
@@ -33,9 +33,20 @@ const Configuracoes = () => {
   const [senhaNova, setSenhaNova] = useState('');
   const [senhaConfirma, setSenhaConfirma] = useState('');
 
+  // Configuração do banco de dados
+  const [dbPath, setDbPath] = useState<string>('');
+
   useEffect(() => {
     carregarUsuarios();
+    carregarDbPath();
   }, []);
+
+  const carregarDbPath = async () => {
+    if (window.electronAPI && 'getDbPath' in window.electronAPI) {
+      const path = await (window.electronAPI as any).getDbPath();
+      setDbPath(path);
+    }
+  };
 
   const carregarUsuarios = async () => {
     if (window.electronAPI) {
@@ -135,6 +146,24 @@ const Configuracoes = () => {
     }
   };
 
+  const handleSelecionarPasta = async () => {
+    if (window.electronAPI && 'selectDbFolder' in window.electronAPI) {
+      const result = await (window.electronAPI as any).selectDbFolder();
+      if (result.success) {
+        toast({
+          title: 'Pasta selecionada',
+          description: 'O aplicativo será reiniciado para aplicar as mudanças.',
+        });
+      } else {
+        toast({
+          title: 'Erro',
+          description: result.error || 'Erro ao selecionar pasta',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   if (!user?.role || user.role !== 'admin') {
     return (
       <div className="p-8">
@@ -169,6 +198,10 @@ const Configuracoes = () => {
           <TabsTrigger value="senha">
             <Lock className="w-4 h-4 mr-2" />
             Alterar Senha
+          </TabsTrigger>
+          <TabsTrigger value="database">
+            <Database className="w-4 h-4 mr-2" />
+            Banco de Dados
           </TabsTrigger>
         </TabsList>
 
@@ -304,6 +337,42 @@ const Configuracoes = () => {
                   {loading ? 'Alterando...' : 'Alterar Senha'}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-4">
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle>Local do Banco de Dados</CardTitle>
+              <CardDescription>
+                Configure onde os dados serão salvos. Você pode apontar para uma pasta do Google Drive ou qualquer outro local no seu computador.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Pasta atual</Label>
+                <div className="p-3 bg-secondary/20 rounded-md">
+                  <p className="text-sm font-mono break-all">{dbPath || 'Carregando...'}</p>
+                </div>
+              </div>
+              
+              <div className="border-t pt-4">
+                <Button onClick={handleSelecionarPasta} variant="default">
+                  Selecionar Nova Pasta
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Após selecionar, o aplicativo será reiniciado automaticamente.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-4 mt-4">
+                <h4 className="font-semibold text-sm mb-2">💡 Dica: Google Drive</h4>
+                <p className="text-sm text-muted-foreground">
+                  Se você instalou o Google Drive no seu computador, pode selecionar uma pasta dentro dele. 
+                  Assim seus dados ficam sincronizados na nuvem automaticamente!
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -9,9 +9,11 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ImovelCard } from '@/components/ImovelCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ImoveisVenda = () => {
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,11 +39,15 @@ const ImoveisVenda = () => {
   };
 
   const handleDelete = async () => {
-    if (!imovelToDelete) return;
+    if (!imovelToDelete || !user) return;
     
     try {
       if (window.electronAPI) {
-        const result = await (window.electronAPI as any).deleteImovel({ id: imovelToDelete });
+        const result = await (window.electronAPI as any).deleteImovel({ 
+          id: imovelToDelete,
+          userId: user.id,
+          userName: user.username
+        });
         if (result.success) {
           toast.success('Imóvel removido com sucesso!');
           loadData();
@@ -102,7 +108,7 @@ const ImoveisVenda = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredImoveis.map((imovel) => (
-            <ImovelCard key={imovel.id} imovel={imovel} onDelete={openDeleteDialog} />
+            <ImovelCard key={imovel.id} imovel={imovel} onDelete={openDeleteDialog} isAdmin={isAdmin} />
           ))}
         </div>
 

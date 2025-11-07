@@ -1,4 +1,5 @@
 // Type definitions for Electron API
+// Updated with database configuration functions
 export {};
 
 declare global {
@@ -65,6 +66,9 @@ declare global {
       
       // Configurações
       selectRootPath: () => Promise<any>;
+      getDbPath: () => Promise<string>;
+      selectDbFolder: () => Promise<{ success: boolean; path?: string; error?: string }>;
+      restartApp: () => Promise<{ success: boolean }>;
     };
   }
 }
