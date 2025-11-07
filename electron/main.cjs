@@ -496,6 +496,7 @@ ipcMain.handle('dashboard:getStats', async () => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
 
 // Upload de arquivo
 ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, userId }) => {
