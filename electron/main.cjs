@@ -544,28 +544,6 @@ ipcMain.handle('inquilinos:delete', async (event, { inquilinoId, userId, userNam
   }
 });
 
-ipcMain.handle('proprietarios:delete', async (event, { id, userId, userName }) => {
-  try {
-    const result = db.exec('SELECT * FROM proprietarios WHERE id = ?', [id]);
-    const props = resultToArray(result);
-    
-    if (props.length === 0) {
-      return { success: false, error: 'Proprietário não encontrado' };
-    }
-    
-    const nome = props[0].nome;
-    
-    db.run('DELETE FROM proprietarios WHERE id = ?', [id]);
-    
-    saveDatabase();
-    logAction(event.sender.id, userId, userName, 'Exclusão', `Excluiu proprietário: ${nome}`);
-    
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
 ipcMain.handle('boletos:create', async (event, boleto) => {
   try {
     const id = Date.now().toString();
