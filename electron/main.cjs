@@ -331,6 +331,28 @@ ipcMain.handle('imoveis:getById', async (event, id) => {
   }
 });
 
+ipcMain.handle('imoveis:create', async (event, imovel) => {
+  try {
+    const id = Date.now().toString();
+    
+    db.run(
+      `INSERT INTO imoveis (id, proprietario_id, endereco, rua, bairro, cidade, tipo, tipo_negocio, 
+       valor_aluguel, publicado_internet, situacao, observacoes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, imovel.proprietario_id, imovel.endereco, imovel.rua, imovel.bairro, imovel.cidade,
+       imovel.tipo, imovel.tipo_negocio, imovel.valor_aluguel, imovel.publicado_internet || 0,
+       imovel.situacao, imovel.observacoes || '']
+    );
+    
+    saveDatabase();
+    logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Cadastro', `Cadastrou imóvel: ${imovel.endereco}`);
+    
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Inquilinos
 ipcMain.handle('inquilinos:getAll', async () => {
   try {

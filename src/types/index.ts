@@ -23,8 +23,13 @@ export interface Imovel {
   id: string;
   proprietario_id: string;
   endereco: string;
+  rua?: string;
+  bairro?: string;
+  cidade?: string;
   tipo: string;
+  tipo_negocio: 'Aluguel' | 'Venda';
   valor_aluguel: number;
+  publicado_internet?: number;
   situacao: 'Disponível' | 'Locado' | 'Manutenção';
   observacoes?: string;
   criado_em: string;
@@ -35,9 +40,12 @@ export interface Inquilino {
   imovel_id: string;
   proprietario_id: string;
   nome: string;
+  cpf?: string;
+  rg?: string;
   cpf_cnpj: string;
   telefone: string;
   email: string;
+  renda_aproximada?: number;
   data_inicio: string;
   data_termino?: string;
   observacoes?: string;

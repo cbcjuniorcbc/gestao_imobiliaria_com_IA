@@ -12,6 +12,9 @@ import Dashboard from "./pages/Dashboard";
 import Proprietarios from "./pages/Proprietarios";
 import ProprietarioDetalhes from "./pages/ProprietarioDetalhes";
 import NovoProprietario from "./pages/NovoProprietario";
+import NovoImovel from "./pages/NovoImovel";
+import ImoveisAluguel from "./pages/ImoveisAluguel";
+import ImoveisVenda from "./pages/ImoveisVenda";
 import ImovelDetalhes from "./pages/ImovelDetalhes";
 import InquilinoDetalhes from "./pages/InquilinoDetalhes";
 import Boletos from "./pages/Boletos";
@@ -50,7 +53,10 @@ const AppContent = () => {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/proprietarios" element={<ProtectedRoute><Proprietarios /></ProtectedRoute>} />
               <Route path="/proprietarios/novo" element={<ProtectedRoute><NovoProprietario /></ProtectedRoute>} />
+              <Route path="/proprietarios/:proprietarioId/imoveis/novo" element={<ProtectedRoute><NovoImovel /></ProtectedRoute>} />
               <Route path="/proprietarios/:id" element={<ProtectedRoute><ProprietarioDetalhes /></ProtectedRoute>} />
+              <Route path="/imoveis/aluguel" element={<ProtectedRoute><ImoveisAluguel /></ProtectedRoute>} />
+              <Route path="/imoveis/venda" element={<ProtectedRoute><ImoveisVenda /></ProtectedRoute>} />
               <Route path="/imoveis/:id" element={<ProtectedRoute><ImovelDetalhes /></ProtectedRoute>} />
               <Route path="/inquilinos/:id" element={<ProtectedRoute><InquilinoDetalhes /></ProtectedRoute>} />
               <Route path="/boletos" element={<ProtectedRoute><Boletos /></ProtectedRoute>} />

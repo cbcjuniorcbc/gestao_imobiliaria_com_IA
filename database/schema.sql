@@ -44,8 +44,13 @@ CREATE TABLE IF NOT EXISTS imoveis (
   id TEXT PRIMARY KEY,
   proprietario_id TEXT NOT NULL,
   endereco TEXT NOT NULL,
+  rua TEXT,
+  bairro TEXT,
+  cidade TEXT,
   tipo TEXT NOT NULL,
+  tipo_negocio TEXT NOT NULL CHECK(tipo_negocio IN ('Aluguel', 'Venda')),
   valor_aluguel REAL NOT NULL,
+  publicado_internet INTEGER DEFAULT 0,
   situacao TEXT NOT NULL CHECK(situacao IN ('Disponível', 'Locado', 'Manutenção')),
   observacoes TEXT,
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
@@ -54,6 +59,9 @@ CREATE TABLE IF NOT EXISTS imoveis (
 
 CREATE INDEX idx_imoveis_proprietario ON imoveis(proprietario_id);
 CREATE INDEX idx_imoveis_situacao ON imoveis(situacao);
+CREATE INDEX idx_imoveis_tipo_negocio ON imoveis(tipo_negocio);
+CREATE INDEX idx_imoveis_bairro ON imoveis(bairro);
+CREATE INDEX idx_imoveis_cidade ON imoveis(cidade);
 
 -- ============================================
 -- Tabela: inquilinos
@@ -63,9 +71,12 @@ CREATE TABLE IF NOT EXISTS inquilinos (
   imovel_id TEXT NOT NULL,
   proprietario_id TEXT NOT NULL,
   nome TEXT NOT NULL,
+  cpf TEXT,
+  rg TEXT,
   cpf_cnpj TEXT UNIQUE NOT NULL,
   telefone TEXT NOT NULL,
   email TEXT NOT NULL,
+  renda_aproximada REAL,
   data_inicio TEXT NOT NULL,
   data_termino TEXT,
   observacoes TEXT,
