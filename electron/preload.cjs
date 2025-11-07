@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProprietarios: () => ipcRenderer.invoke('proprietarios:getAll'),
   createProprietario: (data) => ipcRenderer.invoke('proprietarios:create', data),
   updateProprietario: (data) => ipcRenderer.invoke('proprietarios:update', data),
+  deleteProprietario: (data) => ipcRenderer.invoke('proprietarios:delete', data),
   
   // Imóveis
   getImoveis: () => ipcRenderer.invoke('imoveis:getAll'),

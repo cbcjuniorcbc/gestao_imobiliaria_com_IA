@@ -3,15 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Search, Mail, Phone, User } from 'lucide-react';
+import { ArrowLeft, Search, Mail, Phone, Edit, Trash2 } from 'lucide-react';
 import { Inquilino } from '@/types';
 import { mockInquilinos } from '@/lib/mockData';
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Inquilinos = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [inquilinoToDelete, setInquilinoToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -27,6 +33,31 @@ const Inquilinos = () => {
       setInquilinos(mockInquilinos);
     }
     setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!inquilinoToDelete || !user) return;
+    
+    try {
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).deleteInquilino({ 
+          id: inquilinoToDelete,
+          userId: user.id,
+          userName: user.username
+        });
+        if (result.success) {
+          toast.success('Inquilino removido com sucesso!');
+          loadData();
+        } else {
+          toast.error(result.error || 'Erro ao remover inquilino');
+        }
+      }
+    } catch (error) {
+      toast.error('Erro ao remover inquilino');
+    } finally {
+      setDeleteDialogOpen(false);
+      setInquilinoToDelete(null);
+    }
   };
 
   const filteredInquilinos = inquilinos.filter(i =>
@@ -68,16 +99,17 @@ const Inquilinos = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredInquilinos.map((inquilino) => (
-            <Card 
-              key={inquilino.id} 
-              className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-              onClick={() => navigate(`/inquilinos/${inquilino.id}`)}
-            >
+            <Card key={inquilino.id} className="hover:shadow-lg transition-all">
               <CardHeader>
                 <CardTitle className="flex items-start justify-between">
-                  <span className="text-lg">{inquilino.nome}</span>
-                  <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-2 py-1 rounded">
-                    {inquilino.cpf_cnpj}
+                  <span className="text-lg cursor-pointer" onClick={() => navigate(`/inquilinos/${inquilino.id}`)}>{inquilino.nome}</span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/inquilinos/${inquilino.id}/editar`); }}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setInquilinoToDelete(inquilino.id); setDeleteDialogOpen(true); }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -109,6 +141,23 @@ const Inquilinos = () => {
           </Card>
         )}
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este inquilino? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

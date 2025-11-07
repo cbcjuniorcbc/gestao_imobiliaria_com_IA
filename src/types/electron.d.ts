@@ -20,6 +20,7 @@ declare global {
       getProprietarios: () => Promise<any>;
       createProprietario: (data: any) => Promise<any>;
       updateProprietario: (data: any) => Promise<any>;
+      deleteProprietario: (data: any) => Promise<any>;
       
       // Imóveis
       getImoveis: () => Promise<any>;

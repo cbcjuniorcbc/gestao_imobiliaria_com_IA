@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { mockImoveis } from '@/lib/mockData';
 import { Imovel } from '@/types';
-import { ArrowLeft, Search, MapPin, Building2 } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ImovelCard } from '@/components/ImovelCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ImoveisAluguel = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [imovelToDelete, setImovelToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -31,21 +38,42 @@ const ImoveisAluguel = () => {
     setLoading(false);
   };
 
+  const handleDelete = async () => {
+    if (!imovelToDelete || !user) return;
+    
+    try {
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).deleteImovel({ 
+          id: imovelToDelete,
+          userId: user.id,
+          userName: user.username
+        });
+        if (result.success) {
+          toast.success('Imóvel removido com sucesso!');
+          loadData();
+        } else {
+          toast.error(result.error || 'Erro ao remover imóvel');
+        }
+      }
+    } catch (error) {
+      toast.error('Erro ao remover imóvel');
+    } finally {
+      setDeleteDialogOpen(false);
+      setImovelToDelete(null);
+    }
+  };
+
+  const openDeleteDialog = (id: string) => {
+    setImovelToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
   const filteredImoveis = imoveis.filter(i =>
     i.endereco.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.bairro?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.rua?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getSituacaoColor = (situacao: string) => {
-    switch (situacao) {
-      case 'Locado': return 'bg-green-100 text-green-800';
-      case 'Disponível': return 'bg-blue-100 text-blue-800';
-      case 'Manutenção': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Carregando...</p></div>;
@@ -80,45 +108,7 @@ const ImoveisAluguel = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredImoveis.map((imovel) => (
-            <Card 
-              key={imovel.id} 
-              className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-              onClick={() => navigate(`/imoveis/${imovel.id}`)}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5" />
-                    <span>{imovel.tipo}</span>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
-                    {imovel.situacao}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{imovel.endereco}</span>
-                </div>
-                {(imovel.bairro || imovel.cidade) && (
-                  <div className="text-xs text-muted-foreground">
-                    {imovel.bairro && <span>Bairro: {imovel.bairro}</span>}
-                    {imovel.bairro && imovel.cidade && <span> | </span>}
-                    {imovel.cidade && <span>Cidade: {imovel.cidade}</span>}
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-sm text-muted-foreground">Valor do Aluguel</span>
-                  <span className="font-bold text-lg text-green-600">
-                    R$ {imovel.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                {imovel.observacoes && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{imovel.observacoes}</p>
-                )}
-              </CardContent>
-            </Card>
+            <ImovelCard key={imovel.id} imovel={imovel} onDelete={openDeleteDialog} />
           ))}
         </div>
 
@@ -128,6 +118,23 @@ const ImoveisAluguel = () => {
           </Card>
         )}
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este imóvel? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

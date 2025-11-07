@@ -4,13 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { mockProprietarios } from '@/lib/mockData';
-import { ArrowLeft, Search, Plus, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Mail, Phone, MapPin, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Proprietarios = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [proprietarios, setProprietarios] = useState(mockProprietarios);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [proprietarioToDelete, setProprietarioToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadProprietarios();
@@ -33,6 +39,31 @@ const Proprietarios = () => {
     p.cpf_cnpj.includes(searchTerm) ||
     p.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDelete = async () => {
+    if (!proprietarioToDelete || !user) return;
+    
+    try {
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).deleteProprietario({ 
+          id: proprietarioToDelete,
+          userId: user.id,
+          userName: user.username
+        });
+        if (result.success) {
+          toast.success('Proprietário removido com sucesso!');
+          loadProprietarios();
+        } else {
+          toast.error(result.error || 'Erro ao remover proprietário');
+        }
+      }
+    } catch (error) {
+      toast.error('Erro ao remover proprietário');
+    } finally {
+      setDeleteDialogOpen(false);
+      setProprietarioToDelete(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
@@ -74,16 +105,17 @@ const Proprietarios = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProprietarios.map((proprietario) => (
-            <Card 
-              key={proprietario.id} 
-              className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-              onClick={() => navigate(`/proprietarios/${proprietario.id}`)}
-            >
+            <Card key={proprietario.id} className="hover:shadow-lg transition-all">
               <CardHeader>
                 <CardTitle className="flex items-start justify-between">
-                  <span className="text-lg">{proprietario.nome}</span>
-                  <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-2 py-1 rounded">
-                    {proprietario.cpf_cnpj}
+                  <span className="text-lg cursor-pointer" onClick={() => navigate(`/proprietarios/${proprietario.id}`)}>{proprietario.nome}</span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/proprietarios/${proprietario.id}/editar`); }}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setProprietarioToDelete(proprietario.id); setDeleteDialogOpen(true); }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -112,6 +144,23 @@ const Proprietarios = () => {
           </Card>
         )}
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este proprietário? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
