@@ -10,6 +10,11 @@ declare global {
         error?: string;
       }>;
 
+      // ==================== USUÁRIOS ====================
+      getUsuarios: () => Promise<{ success: boolean; users?: any[]; error?: string }>;
+      createUsuario: (data: { username: string; password: string; role: string }) => Promise<{ success: boolean; userId?: string; message?: string }>;
+      updatePassword: (data: { userId: number; newPassword: string }) => Promise<{ success: boolean; message?: string }>;
+
       // ==================== PROPRIETÁRIOS ====================
       getProprietarios: () => Promise<any[]>;
       getProprietarioById: (id: string) => Promise<any>;

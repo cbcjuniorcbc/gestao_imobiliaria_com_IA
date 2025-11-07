@@ -161,6 +161,12 @@ ipcMain.handle('auth:login', async (event, { username, password }) => {
     const user = {};
     columns.forEach((col, i) => user[col] = values[i]);
     
+    // Permitir login do admin sem senha se password_hash estiver vazio
+    if (user.password_hash === '' && username === 'admin' && password === '') {
+      const { password_hash, ...userWithoutPassword } = user;
+      return { success: true, user: userWithoutPassword };
+    }
+    
     const isValid = await bcrypt.compare(password, user.password_hash);
     
     if (!isValid) {
@@ -173,6 +179,60 @@ ipcMain.handle('auth:login', async (event, { username, password }) => {
   } catch (error) {
     console.error('Erro no login:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// Usuários - Listar todos
+ipcMain.handle('usuarios:getAll', async () => {
+  try {
+    const result = db.exec('SELECT id, username, role, created_at FROM usuarios ORDER BY username');
+    const usuarios = resultToArray(result);
+    return { success: true, users: usuarios };
+  } catch (error) {
+    console.error('Erro ao listar usuários:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Usuários - Criar novo
+ipcMain.handle('usuarios:create', async (event, { username, password, role }) => {
+  try {
+    // Verificar se usuário já existe
+    const existingResult = db.exec('SELECT id FROM usuarios WHERE username = ?', [username]);
+    if (existingResult && existingResult.length > 0 && existingResult[0].values.length > 0) {
+      return { success: false, message: 'Usuário já existe' };
+    }
+
+    const passwordHash = password ? await bcrypt.hash(password, 10) : '';
+    const id = Date.now().toString();
+    
+    db.run(
+      'INSERT INTO usuarios (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
+      [id, username, passwordHash, role]
+    );
+    
+    saveDatabase();
+
+    return { success: true, userId: id };
+  } catch (error) {
+    console.error('Erro ao criar usuário:', error);
+    return { success: false, message: 'Erro ao criar usuário' };
+  }
+});
+
+// Usuários - Alterar senha
+ipcMain.handle('usuarios:updatePassword', async (event, { userId, newPassword }) => {
+  try {
+    const passwordHash = newPassword ? await bcrypt.hash(newPassword, 10) : '';
+    
+    db.run('UPDATE usuarios SET password_hash = ? WHERE id = ?', [passwordHash, userId]);
+    
+    saveDatabase();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    return { success: false, message: 'Erro ao alterar senha' };
   }
 });
 

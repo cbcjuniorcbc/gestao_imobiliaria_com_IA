@@ -99,10 +99,10 @@ const Login = () => {
           </form>
           
           <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-xs text-muted-foreground mb-2 font-semibold">Credenciais de teste:</p>
+            <p className="text-xs text-muted-foreground mb-2 font-semibold">Primeiro acesso:</p>
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p><strong>Admin:</strong> admin / admin123</p>
-              <p><strong>Recepção:</strong> recep / recep123</p>
+              <p><strong>Usuário:</strong> admin (deixe a senha em branco)</p>
+              <p className="mt-2">Após o login, configure sua senha e crie outros usuários na área de Configurações.</p>
             </div>
           </div>
         </CardContent>

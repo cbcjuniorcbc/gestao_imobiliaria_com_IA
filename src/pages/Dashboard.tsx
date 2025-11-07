@@ -13,7 +13,8 @@ import {
   DollarSign,
   LogOut,
   Users,
-  Calendar
+  Calendar,
+  Settings
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -107,10 +108,18 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button variant="outline" onClick={() => navigate('/configuracoes')}>
+                <Settings className="w-4 h-4 mr-2" />
+                Configurações
+              </Button>
+            )}
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -175,10 +184,10 @@ const Dashboard = () => {
               size="lg" 
               className="h-24 flex flex-col gap-2"
               variant="outline"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/configuracoes')}
             >
-              <TrendingUp className="w-6 h-6" />
-              <span>Administração</span>
+              <Settings className="w-6 h-6" />
+              <span>Configurações</span>
             </Button>
           )}
         </div>

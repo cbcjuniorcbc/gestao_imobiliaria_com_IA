@@ -14,13 +14,11 @@ DELETE FROM proprietarios;
 DELETE FROM usuarios;
 
 -- ============================================
--- Usuários de teste
--- Senhas: admin123 e recep123
--- Hash gerado com bcrypt (rounds=10)
+-- Usuário admin inicial (sem senha)
+-- Configure a senha após o primeiro login
 -- ============================================
 INSERT INTO usuarios (id, username, password_hash, role) VALUES
-('1', 'admin', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin'),
-('2', 'recep', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'recepcao');
+('1', 'admin', '', 'admin');
 
 -- ============================================
 -- Proprietários
