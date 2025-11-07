@@ -544,26 +544,6 @@ ipcMain.handle('inquilinos:delete', async (event, { inquilinoId, userId, userNam
   }
 });
 
-ipcMain.handle('proprietarios:update', async (event, proprietario) => {
-  try {
-    db.run(
-      `UPDATE proprietarios SET nome = ?, cpf_cnpj = ?, telefone = ?, email = ?, 
-       endereco = ?, metodo_recebimento = ?, observacoes = ?
-       WHERE id = ?`,
-      [proprietario.nome, proprietario.cpf_cnpj, proprietario.telefone, proprietario.email,
-       proprietario.endereco, proprietario.metodo_recebimento || '', proprietario.observacoes || '', 
-       proprietario.id]
-    );
-    
-    saveDatabase();
-    logAction(event.sender.id, proprietario.user_id, proprietario.user_name, 'Edição', `Editou proprietário: ${proprietario.nome}`);
-    
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
 ipcMain.handle('proprietarios:delete', async (event, { id, userId, userName }) => {
   try {
     const result = db.exec('SELECT * FROM proprietarios WHERE id = ?', [id]);

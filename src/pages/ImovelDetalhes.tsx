@@ -60,6 +60,13 @@ const ImovelDetalhes = () => {
     }
   };
 
+  const getBackPath = () => {
+    if (imovel?.tipo === 'Locação') return '/imoveis/aluguel';
+    if (imovel?.tipo === 'Venda') return '/imoveis/venda';
+    if (imovel?.tipo === 'Ponto Comercial') return '/imoveis/ponto-comercial';
+    return '/dashboard';
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Carregando...</p></div>;
   }
@@ -67,7 +74,7 @@ const ImovelDetalhes = () => {
   if (!imovel) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(getBackPath())}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <Card>
@@ -82,7 +89,7 @@ const ImovelDetalhes = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(getBackPath())}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-3xl font-bold">Detalhes do Imóvel</h1>
@@ -108,7 +115,7 @@ const ImovelDetalhes = () => {
                   });
                   if (result.success) {
                     toast.success('Imóvel removido com sucesso!');
-                    navigate(-1);
+                    navigate(getBackPath());
                   } else {
                     toast.error(result.error || 'Erro ao remover imóvel');
                   }

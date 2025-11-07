@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Search, CheckCircle2, Clock, AlertCircle, ArrowLeft } from "lucide-react";
 import { Boleto, Inquilino } from '@/types';
 import { mockBoletos, mockInquilinos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 const Boletos = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
@@ -106,12 +108,22 @@ const Boletos = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Boletos e Pagamentos</h1>
-        <p className="text-muted-foreground mt-1">Gestão e histórico de boletos</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
+      <header className="bg-card border-b shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Boletos e Pagamentos</h1>
+              <p className="text-sm text-muted-foreground">Gestão e histórico de boletos</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
+      <main className="container mx-auto px-4 py-8 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -264,6 +276,7 @@ const Boletos = () => {
           )}
         </CardContent>
       </Card>
+      </main>
     </div>
   );
 };
