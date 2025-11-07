@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS proprietarios (
   telefone TEXT NOT NULL,
   email TEXT NOT NULL,
   endereco TEXT NOT NULL,
+  metodo_recebimento TEXT,
   observacoes TEXT,
   pasta_path TEXT NOT NULL,
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -45,13 +46,15 @@ CREATE TABLE IF NOT EXISTS imoveis (
   proprietario_id TEXT NOT NULL,
   endereco TEXT NOT NULL,
   rua TEXT,
+  numero TEXT,
   bairro TEXT,
   cidade TEXT,
-  tipo TEXT NOT NULL,
-  tipo_negocio TEXT NOT NULL CHECK(tipo_negocio IN ('Aluguel', 'Venda')),
-  valor_aluguel REAL NOT NULL,
+  estado TEXT,
+  cep TEXT,
+  tipo TEXT NOT NULL CHECK(tipo IN ('Venda', 'Locação', 'Ponto Comercial')),
+  valor REAL NOT NULL,
   publicado_internet INTEGER DEFAULT 0,
-  situacao TEXT NOT NULL CHECK(situacao IN ('Disponível', 'Locado', 'Manutenção')),
+  situacao TEXT NOT NULL CHECK(situacao IN ('Disponível', 'Locado', 'Vendido', 'Manutenção')),
   observacoes TEXT,
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
   FOREIGN KEY (proprietario_id) REFERENCES proprietarios(id) ON DELETE CASCADE
@@ -59,9 +62,10 @@ CREATE TABLE IF NOT EXISTS imoveis (
 
 CREATE INDEX idx_imoveis_proprietario ON imoveis(proprietario_id);
 CREATE INDEX idx_imoveis_situacao ON imoveis(situacao);
-CREATE INDEX idx_imoveis_tipo_negocio ON imoveis(tipo_negocio);
+CREATE INDEX idx_imoveis_tipo ON imoveis(tipo);
 CREATE INDEX idx_imoveis_bairro ON imoveis(bairro);
 CREATE INDEX idx_imoveis_cidade ON imoveis(cidade);
+CREATE INDEX idx_imoveis_estado ON imoveis(estado);
 
 -- ============================================
 -- Tabela: inquilinos

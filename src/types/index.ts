@@ -14,6 +14,7 @@ export interface Proprietario {
   telefone: string;
   email: string;
   endereco: string;
+  metodo_recebimento?: string;
   observacoes?: string;
   pasta_path: string;
   criado_em: string;
@@ -24,13 +25,15 @@ export interface Imovel {
   proprietario_id: string;
   endereco: string;
   rua?: string;
+  numero?: string;
   bairro?: string;
   cidade?: string;
-  tipo: string;
-  tipo_negocio: 'Aluguel' | 'Venda';
-  valor_aluguel: number;
+  estado?: string;
+  cep?: string;
+  tipo: 'Venda' | 'Locação' | 'Ponto Comercial';
+  valor: number;
   publicado_internet?: number;
-  situacao: 'Disponível' | 'Locado' | 'Manutenção';
+  situacao: 'Disponível' | 'Locado' | 'Vendido' | 'Manutenção';
   observacoes?: string;
   criado_em: string;
 }

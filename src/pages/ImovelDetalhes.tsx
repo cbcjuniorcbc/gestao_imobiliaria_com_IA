@@ -105,9 +105,11 @@ const ImovelDetalhes = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
             <div>
-              <p className="text-sm text-muted-foreground">Valor do Aluguel</p>
+              <p className="text-sm text-muted-foreground">
+                {imovel.tipo === 'Venda' ? 'Valor de Venda' : imovel.tipo === 'Locação' ? 'Valor do Aluguel' : 'Valor Mensal'}
+              </p>
               <p className="font-bold text-2xl text-green-600">
-                R$ {imovel.valor_aluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {imovel.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             {proprietario && (

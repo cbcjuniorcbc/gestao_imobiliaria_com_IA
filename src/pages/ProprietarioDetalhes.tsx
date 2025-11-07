@@ -101,7 +101,15 @@ const ProprietarioDetalhes = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-start gap-3">
+          {proprietario.metodo_recebimento && (
+            <div className="flex items-start gap-3 pt-2 border-t">
+              <div className="w-full">
+                <p className="text-sm text-muted-foreground">Método de Recebimento</p>
+                <p className="font-medium">{proprietario.metodo_recebimento}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-start gap-3 pt-2 border-t">
             <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
             <div>
               <p className="text-sm text-muted-foreground">Endereço</p>
@@ -143,9 +151,11 @@ const ProprietarioDetalhes = () => {
                   <span className="text-sm">{imovel.endereco}</span>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-sm text-muted-foreground">Valor do Aluguel</span>
+                  <span className="text-sm text-muted-foreground">
+                    {imovel.tipo === 'Venda' ? 'Valor de Venda' : imovel.tipo === 'Locação' ? 'Valor do Aluguel' : 'Valor Mensal'}
+                  </span>
                   <span className="font-bold text-lg text-green-600">
-                    R$ {imovel.valor_aluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {imovel.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 {imovel.observacoes && (

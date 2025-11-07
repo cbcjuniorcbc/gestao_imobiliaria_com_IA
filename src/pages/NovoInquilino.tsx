@@ -5,23 +5,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Upload, FileText } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-const NovoProprietario = () => {
+const NovoInquilino = () => {
   const navigate = useNavigate();
+  const { imovelId } = useParams();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [documentos, setDocumentos] = useState<File[]>([]);
   
   const [formData, setFormData] = useState({
     nome: "",
+    cpf: "",
+    rg: "",
     cpf_cnpj: "",
     telefone: "",
     email: "",
-    endereco: "",
-    metodo_recebimento: "",
+    renda_aproximada: "",
+    data_inicio: "",
+    data_termino: "",
     observacoes: ""
   });
 
@@ -44,7 +48,7 @@ const NovoProprietario = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nome || !formData.cpf_cnpj || !formData.telefone || !formData.email || !formData.endereco) {
+    if (!formData.nome || !formData.cpf_cnpj || !formData.telefone || !formData.email || !formData.data_inicio) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -52,23 +56,25 @@ const NovoProprietario = () => {
     setLoading(true);
     
     try {
-      if (window.electronAPI?.createProprietario) {
-        const result = await (window.electronAPI as any).createProprietario({
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).createInquilino({
           ...formData,
+          imovel_id: imovelId,
+          renda_aproximada: formData.renda_aproximada ? parseFloat(formData.renda_aproximada) : null,
           user_id: user?.id,
           user_name: user?.username
         });
 
         if (result.success) {
-          const proprietarioId = result.id;
+          const inquilinoId = result.id;
 
           // Upload dos documentos se houver
-          if (documentos.length > 0 && window.electronAPI?.uploadDocumento) {
+          if (documentos.length > 0) {
             for (const file of documentos) {
               const fileData = await file.arrayBuffer();
               await (window.electronAPI as any).uploadDocumento({
-                ownerType: 'proprietario',
-                ownerId: proprietarioId,
+                ownerType: 'inquilino',
+                ownerId: inquilinoId,
                 file: {
                   name: file.name,
                   data: Array.from(new Uint8Array(fileData))
@@ -78,17 +84,17 @@ const NovoProprietario = () => {
             }
           }
 
-          toast.success("Proprietário cadastrado com sucesso!");
-          navigate("/proprietarios");
+          toast.success("Inquilino cadastrado com sucesso!");
+          navigate(`/imoveis/${imovelId}`);
         } else {
-          toast.error(result.error || "Erro ao cadastrar proprietário");
+          toast.error(result.error || "Erro ao cadastrar inquilino");
         }
       } else {
         toast.error("Funcionalidade não disponível no modo web");
       }
     } catch (error) {
       console.error("Erro:", error);
-      toast.error("Erro ao cadastrar proprietário");
+      toast.error("Erro ao cadastrar inquilino");
     } finally {
       setLoading(false);
     }
@@ -98,27 +104,46 @@ const NovoProprietario = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5 p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/proprietarios")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/imoveis/${imovelId}`)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold">Novo Proprietário</h1>
+          <h1 className="text-3xl font-bold">Novo Inquilino</h1>
         </div>
 
         <form onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
-              <CardTitle>Dados do Proprietário</CardTitle>
+              <CardTitle>Dados do Inquilino</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome Completo *</Label>
+                <Input
+                  id="nome"
+                  name="nome"
+                  value={formData.nome}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo *</Label>
+                  <Label htmlFor="cpf">CPF</Label>
                   <Input
-                    id="nome"
-                    name="nome"
-                    value={formData.nome}
+                    id="cpf"
+                    name="cpf"
+                    value={formData.cpf}
                     onChange={handleInputChange}
-                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rg">RG</Label>
+                  <Input
+                    id="rg"
+                    name="rg"
+                    value={formData.rg}
+                    onChange={handleInputChange}
                   />
                 </div>
                 <div className="space-y-2">
@@ -158,25 +183,39 @@ const NovoProprietario = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço Completo *</Label>
+                <Label htmlFor="renda_aproximada">Renda Aproximada (R$)</Label>
                 <Input
-                  id="endereco"
-                  name="endereco"
-                  value={formData.endereco}
+                  id="renda_aproximada"
+                  name="renda_aproximada"
+                  type="number"
+                  step="0.01"
+                  value={formData.renda_aproximada}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="metodo_recebimento">Método de Recebimento</Label>
-                <Input
-                  id="metodo_recebimento"
-                  name="metodo_recebimento"
-                  value={formData.metodo_recebimento}
-                  onChange={handleInputChange}
-                  placeholder="Ex: PIX, Transferência bancária..."
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="data_inicio">Data de Início *</Label>
+                  <Input
+                    id="data_inicio"
+                    name="data_inicio"
+                    type="date"
+                    value={formData.data_inicio}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="data_termino">Data de Término</Label>
+                  <Input
+                    id="data_termino"
+                    name="data_termino"
+                    type="date"
+                    value={formData.data_termino}
+                    onChange={handleInputChange}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -233,13 +272,13 @@ const NovoProprietario = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate("/proprietarios")}
+                  onClick={() => navigate(`/imoveis/${imovelId}`)}
                   className="flex-1"
                 >
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={loading} className="flex-1">
-                  {loading ? "Cadastrando..." : "Cadastrar Proprietário"}
+                  {loading ? "Cadastrando..." : "Cadastrar Inquilino"}
                 </Button>
               </div>
             </CardContent>
@@ -250,4 +289,4 @@ const NovoProprietario = () => {
   );
 };
 
-export default NovoProprietario;
+export default NovoInquilino;

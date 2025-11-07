@@ -25,6 +25,7 @@ export function AppSidebar() {
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Proprietários", url: "/proprietarios", icon: Building2 },
+    { title: "Inquilinos", url: "/inquilinos", icon: Users },
     { title: "Boletos", url: "/boletos", icon: FileText },
     { title: "Contratos Avulsos", url: "/contratos-avulsos", icon: Calendar },
   ];

@@ -24,16 +24,23 @@ declare global {
       getImoveis: () => Promise<any>;
       getImoveisByProprietario: (id: string) => Promise<any>;
       getImovelById: (id: string) => Promise<any>;
+      createImovel: (data: any) => Promise<any>;
+      updateImovel: (data: any) => Promise<any>;
+      deleteImovel: (data: any) => Promise<any>;
       
       // Inquilinos
       getInquilinos: () => Promise<any>;
       getInquilinosByImovel: (id: string) => Promise<any>;
       getInquilinoById: (id: string) => Promise<any>;
+      createInquilino: (data: any) => Promise<any>;
+      updateInquilino: (data: any) => Promise<any>;
+      deleteInquilino: (data: any) => Promise<any>;
       
       // Boletos
       getBoletos: () => Promise<any>;
       getBoletosByInquilino: (id: string) => Promise<any>;
       marcarBoletoPago: (data: any) => Promise<any>;
+      createBoleto: (data: any) => Promise<any>;
       
       // Documentos
       getDocumentosByOwner: (data: { ownerType: string; ownerId: string }) => Promise<any>;

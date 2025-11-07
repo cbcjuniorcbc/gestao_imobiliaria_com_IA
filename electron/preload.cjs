@@ -18,16 +18,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getImoveis: () => ipcRenderer.invoke('imoveis:getAll'),
   getImoveisByProprietario: (id) => ipcRenderer.invoke('imoveis:getByProprietario', id),
   getImovelById: (id) => ipcRenderer.invoke('imoveis:getById', id),
+  createImovel: (data) => ipcRenderer.invoke('imoveis:create', data),
+  updateImovel: (data) => ipcRenderer.invoke('imoveis:update', data),
+  deleteImovel: (data) => ipcRenderer.invoke('imoveis:delete', data),
   
   // Inquilinos
   getInquilinos: () => ipcRenderer.invoke('inquilinos:getAll'),
   getInquilinosByImovel: (id) => ipcRenderer.invoke('inquilinos:getByImovel', id),
   getInquilinoById: (id) => ipcRenderer.invoke('inquilinos:getById', id),
+  createInquilino: (data) => ipcRenderer.invoke('inquilinos:create', data),
+  updateInquilino: (data) => ipcRenderer.invoke('inquilinos:update', data),
+  deleteInquilino: (data) => ipcRenderer.invoke('inquilinos:delete', data),
   
   // Boletos
   getBoletos: () => ipcRenderer.invoke('boletos:getAll'),
   getBoletosByInquilino: (id) => ipcRenderer.invoke('boletos:getByInquilino', id),
   marcarBoletoPago: (data) => ipcRenderer.invoke('boletos:marcarPago', data),
+  createBoleto: (data) => ipcRenderer.invoke('boletos:create', data),
   
   // Documentos
   getDocumentosByOwner: (data) => ipcRenderer.invoke('documentos:getByOwner', data),

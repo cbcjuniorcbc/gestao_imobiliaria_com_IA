@@ -18,13 +18,15 @@ const ImoveisAluguel = () => {
   }, []);
 
   const loadData = async () => {
-    if (window.electronAPI && 'getImoveis' in window.electronAPI) {
-      const result = await (window.electronAPI as any).getImoveis();
+    if (window.electronAPI?.getImoveis) {
+      const result = await window.electronAPI.getImoveis();
       if (result.success) {
-        setImoveis(result.data.filter((i: Imovel) => i.tipo_negocio === 'Aluguel'));
+        const filtered = result.data.filter((i: Imovel) => i.tipo === 'Locação');
+        setImoveis(filtered);
       }
     } else {
-      setImoveis(mockImoveis.filter(i => i.tipo_negocio === 'Aluguel'));
+      const filtered = mockImoveis.filter(i => i.tipo === 'Locação');
+      setImoveis(filtered);
     }
     setLoading(false);
   };
@@ -109,7 +111,7 @@ const ImoveisAluguel = () => {
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-sm text-muted-foreground">Valor do Aluguel</span>
                   <span className="font-bold text-lg text-green-600">
-                    R$ {imovel.valor_aluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {imovel.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 {imovel.observacoes && (

@@ -384,6 +384,62 @@ ipcMain.handle('inquilinos:getById', async (event, id) => {
   }
 });
 
+ipcMain.handle('inquilinos:create', async (event, inquilino) => {
+  try {
+    const id = Date.now().toString();
+    
+    // Obter pasta do proprietário
+    const propResult = db.exec('SELECT pasta_path FROM proprietarios WHERE id = ?', [inquilino.proprietario_id]);
+    const props = resultToArray(propResult);
+    const pasta_path = `${props[0].pasta_path}/Inquilino_${inquilino.nome.replace(/\s+/g, '_')}`;
+    
+    db.run(
+      `INSERT INTO inquilinos (id, imovel_id, proprietario_id, nome, cpf, rg, cpf_cnpj, telefone, 
+       email, renda_aproximada, data_inicio, data_termino, observacoes, pasta_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, inquilino.imovel_id, inquilino.proprietario_id, inquilino.nome, inquilino.cpf || '', 
+       inquilino.rg || '', inquilino.cpf_cnpj, inquilino.telefone, inquilino.email, 
+       inquilino.renda_aproximada, inquilino.data_inicio, inquilino.data_termino || '', 
+       inquilino.observacoes || '', pasta_path]
+    );
+    
+    saveDatabase();
+    createFolder(pasta_path);
+    
+    // Atualizar situação do imóvel para Locado
+    db.run("UPDATE imoveis SET situacao = 'Locado' WHERE id = ?", [inquilino.imovel_id]);
+    saveDatabase();
+    
+    logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Cadastro', `Cadastrou inquilino: ${inquilino.nome}`);
+    
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('boletos:create', async (event, boleto) => {
+  try {
+    const id = Date.now().toString();
+    
+    db.run(
+      `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 
+       data_inicio, data_termino, situacao, observacoes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, boleto.inquilino_id, boleto.acao, boleto.valor_total, boleto.forma_pagamento, 
+       boleto.data_vencimento, boleto.data_inicio || '', boleto.data_termino || '', 
+       'Em aberto', boleto.observacoes || '']
+    );
+    
+    saveDatabase();
+    logAction(event.sender.id, boleto.user_id, boleto.user_name, 'Boleto', `Registrou boleto: ${boleto.acao} - R$ ${boleto.valor_total}`);
+    
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Boletos
 ipcMain.handle('boletos:getAll', async () => {
   try {
