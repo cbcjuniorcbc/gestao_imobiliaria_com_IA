@@ -27,8 +27,8 @@ const ContratosAvulsos = () => {
   }, []);
 
   const loadData = async () => {
-    if (window.electronAPI?.getContratosAvulsos) {
-      const result = await window.electronAPI.getContratosAvulsos();
+    if (window.electronAPI) {
+      const result = await (window.electronAPI as any).getContratosAvulsos();
       if (result.success) {
         setContratos(result.data);
       }
@@ -51,7 +51,7 @@ const ContratosAvulsos = () => {
       return;
     }
 
-    if (!window.electronAPI?.createContratoAvulso || !user) {
+    if (!window.electronAPI || !user) {
       toast({
         title: "Erro",
         description: "Funcionalidade não disponível",
@@ -60,7 +60,7 @@ const ContratosAvulsos = () => {
       return;
     }
 
-    const result = await window.electronAPI.createContratoAvulso({
+    const result = await (window.electronAPI as any).createContratoAvulso({
       data: formData.data,
       descricao: formData.descricao,
       valor: parseFloat(formData.valor),

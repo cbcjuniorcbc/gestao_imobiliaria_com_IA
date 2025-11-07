@@ -19,19 +19,19 @@ const ImovelDetalhes = () => {
   }, [id]);
 
   const loadData = async () => {
-    if (window.electronAPI?.getImovelById && window.electronAPI?.getInquilinosByImovel && window.electronAPI?.getProprietarios) {
-      const imovelResult = await window.electronAPI.getImovelById(id);
+    if (window.electronAPI) {
+      const imovelResult = await (window.electronAPI as any).getImovelById(id);
       if (imovelResult.success && imovelResult.data) {
         setImovel(imovelResult.data);
         
-        const propResult = await window.electronAPI.getProprietarios();
+        const propResult = await (window.electronAPI as any).getProprietarios();
         if (propResult.success) {
           const prop = propResult.data.find((p: Proprietario) => p.id === imovelResult.data.proprietario_id);
           setProprietario(prop || null);
         }
       }
 
-      const inquilinosResult = await window.electronAPI.getInquilinosByImovel(id);
+      const inquilinosResult = await (window.electronAPI as any).getInquilinosByImovel(id);
       if (inquilinosResult.success) {
         setInquilinos(inquilinosResult.data);
       }

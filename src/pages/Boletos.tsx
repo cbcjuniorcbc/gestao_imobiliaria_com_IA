@@ -23,13 +23,13 @@ const Boletos = () => {
   }, []);
 
   const loadData = async () => {
-    if (window.electronAPI?.getBoletos && window.electronAPI?.getInquilinos) {
-      const boletosResult = await window.electronAPI.getBoletos();
+    if (window.electronAPI) {
+      const boletosResult = await (window.electronAPI as any).getBoletos();
       if (boletosResult.success) {
         setBoletos(boletosResult.data);
       }
 
-      const inquilinosResult = await window.electronAPI.getInquilinos();
+      const inquilinosResult = await (window.electronAPI as any).getInquilinos();
       if (inquilinosResult.success) {
         setInquilinos(inquilinosResult.data);
       }
@@ -42,9 +42,9 @@ const Boletos = () => {
   };
 
   const marcarComoPago = async (boletoId: string) => {
-    if (!window.electronAPI?.marcarBoletoPago || !user) return;
+    if (!window.electronAPI || !user) return;
 
-    const result = await window.electronAPI.marcarBoletoPago({
+    const result = await (window.electronAPI as any).marcarBoletoPago({
       boletoId,
       userId: user.id,
       userName: user.username

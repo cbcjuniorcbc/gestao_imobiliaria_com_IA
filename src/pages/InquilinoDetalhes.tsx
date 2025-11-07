@@ -23,22 +23,20 @@ const InquilinoDetalhes = () => {
   }, [id]);
 
   const loadData = async () => {
-    if (window.electronAPI?.getInquilinoById && window.electronAPI?.getBoletosByInquilino) {
-      const inquilinoResult = await window.electronAPI.getInquilinoById(id);
+    if (window.electronAPI) {
+      const inquilinoResult = await (window.electronAPI as any).getInquilinoById(id);
       if (inquilinoResult.success && inquilinoResult.data) {
         setInquilino(inquilinoResult.data);
       }
 
-      const boletosResult = await window.electronAPI.getBoletosByInquilino(id);
+      const boletosResult = await (window.electronAPI as any).getBoletosByInquilino(id);
       if (boletosResult.success) {
         setBoletos(boletosResult.data);
       }
 
-      if (window.electronAPI?.getDocumentosByOwner) {
-        const docsResult = await window.electronAPI.getDocumentosByOwner({ ownerType: 'inquilino', ownerId: id });
-        if (docsResult.success) {
-          setDocumentos(docsResult.data);
-        }
+      const docsResult = await (window.electronAPI as any).getDocumentosByOwner({ ownerType: 'inquilino', ownerId: id });
+      if (docsResult.success) {
+        setDocumentos(docsResult.data);
       }
     } else {
       // Fallback para mock
