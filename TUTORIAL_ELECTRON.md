@@ -49,55 +49,68 @@ npm install better-sqlite3 bcrypt
 
 ## 🔧 Passo 2: Configurar package.json
 
-Adicione/modifique estas seções no `package.json`:
+**IMPORTANTE:** Não apague nada do `package.json` existente! Apenas adicione/modifique as seções abaixo.
+
+### 2.1 - Adicionar campos no topo (antes de "scripts"):
+
+Abra o `package.json` e adicione estas linhas logo após o campo `"type": "module",`:
 
 ```json
-{
-  "name": "gestao-imobiliaria",
-  "version": "1.0.0",
-  "description": "Sistema de Gestão Imobiliária Desktop",
-  "main": "electron/main.js",
-  "homepage": "./",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "electron:dev": "concurrently \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:8080 && electron .\"",
-    "electron:build": "npm run build && electron-builder --win nsis",
-    "electron:build:portable": "npm run build && electron-builder --win portable",
-    "postinstall": "electron-builder install-app-deps"
+"main": "electron/main.cjs",
+"homepage": "./",
+```
+
+**IMPORTANTE:** O arquivo é `.cjs` (CommonJS) e não `.js` porque o projeto usa ES modules.
+
+### 2.2 - Adicionar novos scripts na seção "scripts":
+
+Dentro da seção `"scripts"`, adicione estas novas linhas (mantenha os scripts existentes como `dev`, `build`, `lint`):
+
+```json
+"electron:dev": "concurrently \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:8080 && electron .\"",
+"electron:build": "npm run build && electron-builder --win nsis",
+"electron:build:portable": "npm run build && electron-builder --win portable",
+"postinstall": "electron-builder install-app-deps"
+```
+
+### 2.3 - Adicionar configuração do electron-builder (no final do arquivo):
+
+Adicione esta seção completa no final do `package.json`, antes da última chave `}`:
+
+```json
+"build": {
+  "appId": "com.gestao.imobiliaria",
+  "productName": "Gestão Imobiliária",
+  "win": {
+    "target": ["nsis", "portable"],
+    "icon": "build/icon.ico"
   },
-  "build": {
-    "appId": "com.gestao.imobiliaria",
-    "productName": "Gestão Imobiliária",
-    "win": {
-      "target": ["nsis", "portable"],
-      "icon": "build/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Gestão Imobiliária"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "database/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "database",
-        "to": "database"
-      }
-    ],
-    "directories": {
-      "buildResources": "build",
-      "output": "release"
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Gestão Imobiliária"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "database/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "database",
+      "to": "database"
     }
+  ],
+  "directories": {
+    "buildResources": "build",
+    "output": "release"
   }
 }
 ```
+
+**Resultado final:** Seu `package.json` deve manter todas as dependências e devDependencies existentes, apenas com os novos campos e scripts adicionados.
 
 ---
 
@@ -109,7 +122,9 @@ Adicione/modifique estas seções no `package.json`:
 mkdir electron
 ```
 
-### 3.2 - Criar `electron/main.js`
+### 3.2 - ✅ Arquivo `electron/main.cjs` JÁ CRIADO
+
+**Não precisa criar manualmente!** O arquivo já foi criado com todo o código necessário.
 
 ```javascript
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
@@ -443,7 +458,9 @@ app.on('before-quit', () => {
 });
 ```
 
-### 3.3 - Criar `electron/preload.js`
+### 3.3 - ✅ Arquivo `electron/preload.cjs` JÁ CRIADO
+
+**Não precisa criar manualmente!** O arquivo já foi criado com a API exposta ao React.
 
 ```javascript
 const { contextBridge, ipcRenderer } = require('electron');
@@ -487,50 +504,36 @@ Você pode usar ferramentas como:
 
 ## 🔌 Passo 5: Adaptar o React para usar Electron
 
-### 5.1 - Modificar `src/contexts/AuthContext.tsx`
+✅ **Os arquivos abaixo já foram criados/atualizados para você! Não precisa fazer nada neste passo.**
 
-Detectar se está rodando no Electron e usar a API apropriada:
+### 5.1 - ✅ Arquivo `src/types/electron.d.ts` CRIADO
 
-```typescript
-const isElectron = () => {
-  return window && window.electronAPI !== undefined;
-};
+Este arquivo define todos os tipos TypeScript para a comunicação Electron ↔ React.
 
-const login = async (username: string, password: string): Promise<boolean> => {
-  if (isElectron()) {
-    // Usar Electron IPC
-    const result = await window.electronAPI.login({ username, password });
-    if (result.success) {
-      setUser(result.user);
-      localStorage.setItem('currentUser', JSON.stringify(result.user));
-      return true;
-    }
-    return false;
-  } else {
-    // Fallback para mock (desenvolvimento web)
-    // ... código existente
-  }
-};
-```
+**Contém 80+ métodos organizados por categoria:**
 
-### 5.2 - Adicionar tipos TypeScript
+- **Autenticação**: login
+- **Proprietários**: getProprietarios, getProprietarioById, createProprietario, updateProprietario, deleteProprietario
+- **Imóveis**: getImoveis, getImoveisByProprietario, getImovelById, createImovel, updateImovel, deleteImovel
+- **Inquilinos**: getInquilinos, getInquilinosByImovel, getInquilinoById, createInquilino, updateInquilino, deleteInquilino
+- **Boletos**: getBoletos, getBoletosByInquilino, createBoleto, updateBoleto, marcarBoletoPago, deleteBoleto
+- **Documentos**: uploadDocument, getDocumentos, deleteDocumento, openDocumento
+- **Logs**: createLog, getLogs (com filtros)
+- **Contratos Avulsos**: getContratosAvulsos, createContratoAvulso, updateContratoAvulso, deleteContratoAvulso
+- **Dashboard**: getDashboardStats
+- **Configurações**: selectRootPath, getRootPath, setRootPath, createBackup, openExternalLink
+- **Sistema**: getAppVersion, minimizeWindow, maximizeWindow, closeWindow
 
-Criar `src/types/electron.d.ts`:
+### 5.2 - ✅ Arquivo `src/contexts/AuthContext.tsx` ATUALIZADO
 
-```typescript
-export {};
+Este arquivo agora detecta automaticamente se está rodando no Electron ou no navegador:
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      login: (credentials: { username: string; password: string }) => Promise<any>;
-      getProprietarios: () => Promise<any>;
-      createProprietario: (data: any) => Promise<any>;
-      // ... adicionar todos os métodos
-    };
-  }
-}
-```
+- **No Electron**: usa `window.electronAPI.login()` com autenticação real via SQLite
+- **No navegador**: usa mock com credenciais `admin/admin123` e `recep/recep123`
+
+### 5.3 - ✅ Arquivo `src/vite-env.d.ts` ATUALIZADO
+
+Removidas definições duplicadas (agora centralizadas em `electron.d.ts`).
 
 ---
 
@@ -596,10 +599,12 @@ Instale o Visual C++ Redistributable:
 
 ### App não abre após build
 
-Verifique se o `main.js` está correto em `package.json`:
+Verifique se o `main.cjs` está correto em `package.json`:
 ```json
-"main": "electron/main.js"
+"main": "electron/main.cjs"
 ```
+
+**Nota:** O arquivo usa extensão `.cjs` (CommonJS) porque o projeto está configurado como ES module.
 
 ### Banco de dados corrompido
 
