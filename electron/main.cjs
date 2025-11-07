@@ -706,7 +706,11 @@ ipcMain.handle('documentos:download', async (event, { documentoId }) => {
 // Logs
 ipcMain.handle('logs:getAll', async () => {
   try {
-    const result = db.exec('SELECT * FROM logs_acoes ORDER BY timestamp DESC LIMIT 1000');
+    const result = db.exec(
+      `SELECT id, usuario_id as user_id, usuario_nome as user_name, 
+              acao_tipo as acao, descricao, timestamp 
+       FROM logs_acoes ORDER BY timestamp DESC LIMIT 1000`
+    );
     const logs = resultToArray(result);
     return { success: true, data: logs };
   } catch (error) {
@@ -718,7 +722,9 @@ ipcMain.handle('logs:getAll', async () => {
 ipcMain.handle('logs:getByDateRange', async (event, { startDate, endDate }) => {
   try {
     const result = db.exec(
-      `SELECT * FROM logs_acoes 
+      `SELECT id, usuario_id as user_id, usuario_nome as user_name, 
+              acao_tipo as acao, descricao, timestamp 
+       FROM logs_acoes 
        WHERE date(timestamp) >= date(?) AND date(timestamp) <= date(?)
        ORDER BY timestamp DESC`,
       [startDate, endDate]

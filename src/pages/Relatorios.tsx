@@ -82,7 +82,7 @@ const Relatorios = () => {
 
   const getAcaoColor = (acao: string) => {
     const colors: Record<string, string> = {
-      'Criação': 'bg-green-100 text-green-800',
+      'Cadastro': 'bg-green-100 text-green-800',
       'Edição': 'bg-blue-100 text-blue-800',
       'Exclusão': 'bg-red-100 text-red-800',
       'Boleto': 'bg-yellow-100 text-yellow-800',
@@ -135,10 +135,10 @@ const Relatorios = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Criações</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Cadastros</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-green-600">{countByAction('Criação')}</p>
+                  <p className="text-3xl font-bold text-green-600">{countByAction('Cadastro')}</p>
                 </CardContent>
               </Card>
               <Card>
