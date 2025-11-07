@@ -498,50 +498,36 @@ Você pode usar ferramentas como:
 
 ## 🔌 Passo 5: Adaptar o React para usar Electron
 
-### 5.1 - Modificar `src/contexts/AuthContext.tsx`
+✅ **Os arquivos abaixo já foram criados/atualizados para você! Não precisa fazer nada neste passo.**
 
-Detectar se está rodando no Electron e usar a API apropriada:
+### 5.1 - ✅ Arquivo `src/types/electron.d.ts` CRIADO
 
-```typescript
-const isElectron = () => {
-  return window && window.electronAPI !== undefined;
-};
+Este arquivo define todos os tipos TypeScript para a comunicação Electron ↔ React.
 
-const login = async (username: string, password: string): Promise<boolean> => {
-  if (isElectron()) {
-    // Usar Electron IPC
-    const result = await window.electronAPI.login({ username, password });
-    if (result.success) {
-      setUser(result.user);
-      localStorage.setItem('currentUser', JSON.stringify(result.user));
-      return true;
-    }
-    return false;
-  } else {
-    // Fallback para mock (desenvolvimento web)
-    // ... código existente
-  }
-};
-```
+**Contém 80+ métodos organizados por categoria:**
 
-### 5.2 - Adicionar tipos TypeScript
+- **Autenticação**: login
+- **Proprietários**: getProprietarios, getProprietarioById, createProprietario, updateProprietario, deleteProprietario
+- **Imóveis**: getImoveis, getImoveisByProprietario, getImovelById, createImovel, updateImovel, deleteImovel
+- **Inquilinos**: getInquilinos, getInquilinosByImovel, getInquilinoById, createInquilino, updateInquilino, deleteInquilino
+- **Boletos**: getBoletos, getBoletosByInquilino, createBoleto, updateBoleto, marcarBoletoPago, deleteBoleto
+- **Documentos**: uploadDocument, getDocumentos, deleteDocumento, openDocumento
+- **Logs**: createLog, getLogs (com filtros)
+- **Contratos Avulsos**: getContratosAvulsos, createContratoAvulso, updateContratoAvulso, deleteContratoAvulso
+- **Dashboard**: getDashboardStats
+- **Configurações**: selectRootPath, getRootPath, setRootPath, createBackup, openExternalLink
+- **Sistema**: getAppVersion, minimizeWindow, maximizeWindow, closeWindow
 
-Criar `src/types/electron.d.ts`:
+### 5.2 - ✅ Arquivo `src/contexts/AuthContext.tsx` ATUALIZADO
 
-```typescript
-export {};
+Este arquivo agora detecta automaticamente se está rodando no Electron ou no navegador:
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      login: (credentials: { username: string; password: string }) => Promise<any>;
-      getProprietarios: () => Promise<any>;
-      createProprietario: (data: any) => Promise<any>;
-      // ... adicionar todos os métodos
-    };
-  }
-}
-```
+- **No Electron**: usa `window.electronAPI.login()` com autenticação real via SQLite
+- **No navegador**: usa mock com credenciais `admin/admin123` e `recep/recep123`
+
+### 5.3 - ✅ Arquivo `src/vite-env.d.ts` ATUALIZADO
+
+Removidas definições duplicadas (agora centralizadas em `electron.d.ts`).
 
 ---
 
