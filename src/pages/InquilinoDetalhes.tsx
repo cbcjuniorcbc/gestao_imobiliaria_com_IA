@@ -138,6 +138,35 @@ const InquilinoDetalhes = () => {
                 <p className="font-medium">{inquilino.telefone}</p>
               </div>
             </div>
+            {inquilino.cpf && (
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">CPF</p>
+                  <p className="font-medium">{inquilino.cpf}</p>
+                </div>
+              </div>
+            )}
+            {inquilino.rg && (
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">RG</p>
+                  <p className="font-medium">{inquilino.rg}</p>
+                </div>
+              </div>
+            )}
+            {inquilino.renda_aproximada && (
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Renda Aproximada</p>
+                  <p className="font-medium text-green-600">
+                    R$ {inquilino.renda_aproximada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <Calendar className="w-5 h-5 text-muted-foreground" />
               <div>
@@ -161,6 +190,12 @@ const InquilinoDetalhes = () => {
               <p className="mt-1">{inquilino.observacoes}</p>
             </div>
           )}
+          <div className="flex gap-3 pt-4 border-t">
+            <Button onClick={() => navigate(`/inquilinos/${id}/boleto/novo`)} className="flex-1">
+              <FileText className="w-4 h-4 mr-2" />
+              Registrar Boleto
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

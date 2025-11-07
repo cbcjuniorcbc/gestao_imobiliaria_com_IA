@@ -126,10 +126,16 @@ const ProprietarioDetalhes = () => {
       </Card>
 
       <div>
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <Building2 className="h-6 w-6" />
-          Imóveis ({imoveis.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Building2 className="h-6 w-6" />
+            Imóveis ({imoveis.length})
+          </h2>
+          <Button onClick={() => navigate(`/proprietarios/${id}/imoveis/novo`)}>
+            <Building2 className="w-4 h-4 mr-2" />
+            Adicionar Imóvel
+          </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {imoveis.map((imovel) => (
             <Card 

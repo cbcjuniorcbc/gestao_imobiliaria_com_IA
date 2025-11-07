@@ -1,4 +1,4 @@
-import { Home, Users, Building2, FileText, Calendar, Settings as SettingsIcon, LogOut, ChevronRight } from "lucide-react";
+import { Home, Users, Building2, FileText, Calendar, Settings as SettingsIcon, LogOut, Store, HomeIcon } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +26,9 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Proprietários", url: "/proprietarios", icon: Building2 },
     { title: "Inquilinos", url: "/inquilinos", icon: Users },
+    { title: "Imóveis Aluguel", url: "/imoveis/aluguel", icon: HomeIcon },
+    { title: "Imóveis Venda", url: "/imoveis/venda", icon: Building2 },
+    { title: "Pontos Comerciais", url: "/imoveis/ponto-comercial", icon: Store },
     { title: "Boletos", url: "/boletos", icon: FileText },
     { title: "Contratos Avulsos", url: "/contratos-avulsos", icon: Calendar },
   ];

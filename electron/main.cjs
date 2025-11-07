@@ -279,10 +279,11 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
     const pasta_path = `/Proprietario_${proprietario.nome.replace(/\s+/g, '_')}`;
     
     db.run(
-      `INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, observacoes, pasta_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, metodo_recebimento, observacoes, pasta_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, proprietario.nome, proprietario.cpf_cnpj, proprietario.telefone, 
-       proprietario.email, proprietario.endereco, proprietario.observacoes || '', pasta_path]
+       proprietario.email, proprietario.endereco, proprietario.metodo_recebimento || '', 
+       proprietario.observacoes || '', pasta_path]
     );
     
     saveDatabase();
@@ -336,11 +337,12 @@ ipcMain.handle('imoveis:create', async (event, imovel) => {
     const id = Date.now().toString();
     
     db.run(
-      `INSERT INTO imoveis (id, proprietario_id, endereco, rua, bairro, cidade, tipo, tipo_negocio, 
-       valor_aluguel, publicado_internet, situacao, observacoes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, imovel.proprietario_id, imovel.endereco, imovel.rua, imovel.bairro, imovel.cidade,
-       imovel.tipo, imovel.tipo_negocio, imovel.valor_aluguel, imovel.publicado_internet || 0,
+      `INSERT INTO imoveis (id, proprietario_id, endereco, rua, numero, bairro, cidade, estado, cep, 
+       tipo, valor, publicado_internet, situacao, observacoes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, imovel.proprietario_id, imovel.endereco, imovel.rua || '', imovel.numero || '', 
+       imovel.bairro || '', imovel.cidade || '', imovel.estado || '', imovel.cep || '',
+       imovel.tipo, imovel.valor, imovel.publicado_internet || 0,
        imovel.situacao, imovel.observacoes || '']
     );
     
@@ -348,6 +350,43 @@ ipcMain.handle('imoveis:create', async (event, imovel) => {
     logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Cadastro', `Cadastrou imóvel: ${imovel.endereco}`);
     
     return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('imoveis:update', async (event, imovel) => {
+  try {
+    db.run(
+      `UPDATE imoveis SET endereco = ?, rua = ?, numero = ?, bairro = ?, cidade = ?, estado = ?, 
+       cep = ?, tipo = ?, valor = ?, publicado_internet = ?, situacao = ?, observacoes = ?
+       WHERE id = ?`,
+      [imovel.endereco, imovel.rua || '', imovel.numero || '', imovel.bairro || '', 
+       imovel.cidade || '', imovel.estado || '', imovel.cep || '', imovel.tipo, imovel.valor,
+       imovel.publicado_internet || 0, imovel.situacao, imovel.observacoes || '', imovel.id]
+    );
+    
+    saveDatabase();
+    logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Edição', `Editou imóvel: ${imovel.endereco}`);
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('imoveis:delete', async (event, { imovelId, userId, userName }) => {
+  try {
+    const result = db.exec('SELECT endereco FROM imoveis WHERE id = ?', [imovelId]);
+    const imoveis = resultToArray(result);
+    const endereco = imoveis[0]?.endereco;
+    
+    db.run('DELETE FROM imoveis WHERE id = ?', [imovelId]);
+    
+    saveDatabase();
+    logAction(event.sender.id, userId, userName, 'Exclusão', `Excluiu imóvel: ${endereco}`);
+    
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -389,15 +428,19 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
     const id = Date.now().toString();
     
     // Obter pasta do proprietário
-    const propResult = db.exec('SELECT pasta_path FROM proprietarios WHERE id = ?', [inquilino.proprietario_id]);
-    const props = resultToArray(propResult);
+    const propResult = db.exec('SELECT proprietario_id FROM imoveis WHERE id = ?', [inquilino.imovel_id]);
+    const imoveis = resultToArray(propResult);
+    const proprietario_id = imoveis[0]?.proprietario_id;
+    
+    const propPathResult = db.exec('SELECT pasta_path FROM proprietarios WHERE id = ?', [proprietario_id]);
+    const props = resultToArray(propPathResult);
     const pasta_path = `${props[0].pasta_path}/Inquilino_${inquilino.nome.replace(/\s+/g, '_')}`;
     
     db.run(
       `INSERT INTO inquilinos (id, imovel_id, proprietario_id, nome, cpf, rg, cpf_cnpj, telefone, 
        email, renda_aproximada, data_inicio, data_termino, observacoes, pasta_path)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, inquilino.imovel_id, inquilino.proprietario_id, inquilino.nome, inquilino.cpf || '', 
+      [id, inquilino.imovel_id, proprietario_id, inquilino.nome, inquilino.cpf || '', 
        inquilino.rg || '', inquilino.cpf_cnpj, inquilino.telefone, inquilino.email, 
        inquilino.renda_aproximada, inquilino.data_inicio, inquilino.data_termino || '', 
        inquilino.observacoes || '', pasta_path]
@@ -413,6 +456,73 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
     logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Cadastro', `Cadastrou inquilino: ${inquilino.nome}`);
     
     return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('inquilinos:update', async (event, inquilino) => {
+  try {
+    db.run(
+      `UPDATE inquilinos SET nome = ?, cpf = ?, rg = ?, cpf_cnpj = ?, telefone = ?, email = ?,
+       renda_aproximada = ?, data_inicio = ?, data_termino = ?, observacoes = ?
+       WHERE id = ?`,
+      [inquilino.nome, inquilino.cpf || '', inquilino.rg || '', inquilino.cpf_cnpj, 
+       inquilino.telefone, inquilino.email, inquilino.renda_aproximada, inquilino.data_inicio,
+       inquilino.data_termino || '', inquilino.observacoes || '', inquilino.id]
+    );
+    
+    saveDatabase();
+    logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Edição', `Editou inquilino: ${inquilino.nome}`);
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('inquilinos:delete', async (event, { inquilinoId, userId, userName }) => {
+  try {
+    const result = db.exec('SELECT nome, imovel_id FROM inquilinos WHERE id = ?', [inquilinoId]);
+    const inquilinos = resultToArray(result);
+    const nome = inquilinos[0]?.nome;
+    const imovelId = inquilinos[0]?.imovel_id;
+    
+    db.run('DELETE FROM inquilinos WHERE id = ?', [inquilinoId]);
+    
+    // Verificar se ainda há inquilinos no imóvel
+    const countResult = db.exec('SELECT COUNT(*) as count FROM inquilinos WHERE imovel_id = ?', [imovelId]);
+    const count = resultToArray(countResult)[0]?.count || 0;
+    
+    // Se não há mais inquilinos, marcar imóvel como disponível
+    if (count === 0) {
+      db.run("UPDATE imoveis SET situacao = 'Disponível' WHERE id = ?", [imovelId]);
+    }
+    
+    saveDatabase();
+    logAction(event.sender.id, userId, userName, 'Exclusão', `Excluiu inquilino: ${nome}`);
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('proprietarios:update', async (event, proprietario) => {
+  try {
+    db.run(
+      `UPDATE proprietarios SET nome = ?, cpf_cnpj = ?, telefone = ?, email = ?, 
+       endereco = ?, metodo_recebimento = ?, observacoes = ?
+       WHERE id = ?`,
+      [proprietario.nome, proprietario.cpf_cnpj, proprietario.telefone, proprietario.email,
+       proprietario.endereco, proprietario.metodo_recebimento || '', proprietario.observacoes || '', 
+       proprietario.id]
+    );
+    
+    saveDatabase();
+    logAction(event.sender.id, proprietario.user_id, proprietario.user_name, 'Edição', `Editou proprietário: ${proprietario.nome}`);
+    
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }

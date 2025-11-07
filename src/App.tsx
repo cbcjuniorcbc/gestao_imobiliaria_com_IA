@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Proprietarios from "./pages/Proprietarios";
@@ -15,8 +16,10 @@ import NovoProprietario from "./pages/NovoProprietario";
 import NovoImovel from "./pages/NovoImovel";
 import Inquilinos from "./pages/Inquilinos";
 import NovoInquilino from "./pages/NovoInquilino";
+import NovoBoleto from "./pages/NovoBoleto";
 import ImoveisAluguel from "./pages/ImoveisAluguel";
 import ImoveisVenda from "./pages/ImoveisVenda";
+import ImoveisPontoComercial from "./pages/ImoveisPontoComercial";
 import ImovelDetalhes from "./pages/ImovelDetalhes";
 import InquilinoDetalhes from "./pages/InquilinoDetalhes";
 import Boletos from "./pages/Boletos";
@@ -33,7 +36,7 @@ const AppContent = () => {
   if (!showSidebar) {
     return (
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -55,15 +58,16 @@ const AppContent = () => {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/proprietarios" element={<ProtectedRoute><Proprietarios /></ProtectedRoute>} />
               <Route path="/proprietarios/novo" element={<ProtectedRoute><NovoProprietario /></ProtectedRoute>} />
-          <Route path="/proprietarios/:proprietarioId/imoveis/novo" element={<ProtectedRoute><NovoImovel /></ProtectedRoute>} />
-          <Route path="/imoveis/:imovelId/inquilinos/novo" element={<ProtectedRoute><NovoInquilino /></ProtectedRoute>} />
-          <Route path="/inquilinos" element={<ProtectedRoute><Inquilinos /></ProtectedRoute>} />
-          <Route path="/inquilinos/:id" element={<ProtectedRoute><InquilinoDetalhes /></ProtectedRoute>} />
               <Route path="/proprietarios/:id" element={<ProtectedRoute><ProprietarioDetalhes /></ProtectedRoute>} />
+              <Route path="/proprietarios/:proprietarioId/imoveis/novo" element={<ProtectedRoute><NovoImovel /></ProtectedRoute>} />
               <Route path="/imoveis/aluguel" element={<ProtectedRoute><ImoveisAluguel /></ProtectedRoute>} />
               <Route path="/imoveis/venda" element={<ProtectedRoute><ImoveisVenda /></ProtectedRoute>} />
+              <Route path="/imoveis/ponto-comercial" element={<ProtectedRoute><ImoveisPontoComercial /></ProtectedRoute>} />
               <Route path="/imoveis/:id" element={<ProtectedRoute><ImovelDetalhes /></ProtectedRoute>} />
+              <Route path="/imoveis/:imovelId/inquilinos/novo" element={<ProtectedRoute><NovoInquilino /></ProtectedRoute>} />
+              <Route path="/inquilinos" element={<ProtectedRoute><Inquilinos /></ProtectedRoute>} />
               <Route path="/inquilinos/:id" element={<ProtectedRoute><InquilinoDetalhes /></ProtectedRoute>} />
+              <Route path="/inquilinos/:inquilinoId/boleto/novo" element={<ProtectedRoute><NovoBoleto /></ProtectedRoute>} />
               <Route path="/boletos" element={<ProtectedRoute><Boletos /></ProtectedRoute>} />
               <Route path="/contratos-avulsos" element={<ProtectedRoute><ContratosAvulsos /></ProtectedRoute>} />
               <Route path="/configuracoes" element={<ProtectedRoute adminOnly><Configuracoes /></ProtectedRoute>} />

@@ -20,11 +20,13 @@ const NovoImovel = () => {
   const [formData, setFormData] = useState({
     endereco: "",
     rua: "",
+    numero: "",
     bairro: "",
     cidade: "",
-    tipo: "",
-    tipo_negocio: "Aluguel" as 'Aluguel' | 'Venda',
-    valor_aluguel: "",
+    estado: "",
+    cep: "",
+    tipo: "Locação" as 'Venda' | 'Locação' | 'Ponto Comercial',
+    valor: "",
     publicado_internet: false,
     situacao: "Disponível" as const,
     observacoes: ""
@@ -38,7 +40,7 @@ const NovoImovel = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.endereco || !formData.tipo || !formData.valor_aluguel) {
+    if (!formData.rua || !formData.numero || !formData.tipo || !formData.valor) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -49,13 +51,15 @@ const NovoImovel = () => {
       if (window.electronAPI && 'createImovel' in window.electronAPI) {
         const result = await (window.electronAPI as any).createImovel({
           proprietario_id: proprietarioId,
-          endereco: formData.endereco,
+          endereco: `${formData.rua}, ${formData.numero} - ${formData.bairro} - ${formData.cidade}/${formData.estado}`,
           rua: formData.rua,
+          numero: formData.numero,
           bairro: formData.bairro,
           cidade: formData.cidade,
+          estado: formData.estado,
+          cep: formData.cep,
           tipo: formData.tipo,
-          tipo_negocio: formData.tipo_negocio,
-          valor_aluguel: parseFloat(formData.valor_aluguel),
+          valor: parseFloat(formData.valor),
           publicado_internet: formData.publicado_internet ? 1 : 0,
           situacao: formData.situacao,
           observacoes: formData.observacoes,
@@ -97,89 +101,107 @@ const NovoImovel = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="tipo_negocio">Tipo de Negócio *</Label>
+                <Label htmlFor="tipo">Tipo de Imóvel *</Label>
                 <Select
-                  value={formData.tipo_negocio}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_negocio: value as 'Aluguel' | 'Venda' }))}
+                  value={formData.tipo}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, tipo: value as any }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Aluguel">Aluguel</SelectItem>
+                    <SelectItem value="Locação">Locação</SelectItem>
                     <SelectItem value="Venda">Venda</SelectItem>
+                    <SelectItem value="Ponto Comercial">Ponto Comercial</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo de Imóvel *</Label>
-                  <Input
-                    id="tipo"
-                    name="tipo"
-                    placeholder="Ex: Casa, Apartamento, Comercial"
-                    value={formData.tipo}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="valor_aluguel">
-                    {formData.tipo_negocio === 'Aluguel' ? 'Valor do Aluguel *' : 'Valor de Venda *'}
-                  </Label>
-                  <Input
-                    id="valor_aluguel"
-                    name="valor_aluguel"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.valor_aluguel}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço Completo *</Label>
-                <Input
-                  id="endereco"
-                  name="endereco"
-                  value={formData.endereco}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="rua">Rua</Label>
+                  <Label htmlFor="rua">Rua/Avenida/Logradouro *</Label>
                   <Input
                     id="rua"
                     name="rua"
                     value={formData.rua}
                     onChange={handleInputChange}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bairro">Bairro</Label>
+                  <Label htmlFor="numero">Número *</Label>
+                  <Input
+                    id="numero"
+                    name="numero"
+                    value={formData.numero}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bairro">Bairro *</Label>
                   <Input
                     id="bairro"
                     name="bairro"
                     value={formData.bairro}
                     onChange={handleInputChange}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cidade">Cidade</Label>
+                  <Label htmlFor="cidade">Cidade *</Label>
                   <Input
                     id="cidade"
                     name="cidade"
                     value={formData.cidade}
                     onChange={handleInputChange}
+                    required
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="estado">Estado *</Label>
+                  <Input
+                    id="estado"
+                    name="estado"
+                    maxLength={2}
+                    placeholder="Ex: SP"
+                    value={formData.estado}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cep">CEP</Label>
+                  <Input
+                    id="cep"
+                    name="cep"
+                    placeholder="00000-000"
+                    value={formData.cep}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="valor">
+                  {formData.tipo === 'Venda' ? 'Valor de Venda *' : 'Valor do Aluguel/Mensal *'}
+                </Label>
+                <Input
+                  id="valor"
+                  name="valor"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.valor}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -194,12 +216,13 @@ const NovoImovel = () => {
                   <SelectContent>
                     <SelectItem value="Disponível">Disponível</SelectItem>
                     <SelectItem value="Locado">Locado</SelectItem>
+                    <SelectItem value="Vendido">Vendido</SelectItem>
                     <SelectItem value="Manutenção">Manutenção</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {formData.tipo_negocio === 'Venda' && (
+              {formData.tipo === 'Venda' && (
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="publicado_internet"

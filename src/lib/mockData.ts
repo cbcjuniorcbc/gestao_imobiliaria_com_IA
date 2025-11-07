@@ -24,6 +24,7 @@ export const mockProprietarios: Proprietario[] = [
     telefone: '(11) 98765-4321',
     email: 'joao.silva@email.com',
     endereco: 'Rua das Flores, 123 - São Paulo/SP',
+    metodo_recebimento: 'PIX',
     observacoes: 'Proprietário desde 2020',
     pasta_path: '/Proprietario_Joao_Silva',
     criado_em: '2024-01-15T10:00:00Z'
@@ -35,6 +36,7 @@ export const mockProprietarios: Proprietario[] = [
     telefone: '(11) 91234-5678',
     email: 'maria.santos@email.com',
     endereco: 'Av. Paulista, 456 - São Paulo/SP',
+    metodo_recebimento: 'Transferência Bancária',
     observacoes: '',
     pasta_path: '/Proprietario_Maria_Santos',
     criado_em: '2024-02-10T14:30:00Z'
