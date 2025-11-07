@@ -93,45 +93,16 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
-      {/* Header */}
-      <header className="bg-card border-b shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Gestão Imobiliária</h1>
-              <p className="text-sm text-muted-foreground">
-                {user?.role === 'admin' ? 'Administrador' : 'Recepção'} - {user?.username}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {isAdmin && (
-              <Button variant="outline" onClick={() => navigate('/configuracoes')}>
-                <Settings className="w-4 h-4 mr-2" />
-                Configurações
-              </Button>
-            )}
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
+        <p className="text-muted-foreground">
+          Bem-vindo, {user?.username} ({user?.role === 'admin' ? 'Administrador' : 'Recepção'})
+        </p>
+      </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
-          <p className="text-muted-foreground">Visão geral do sistema</p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {statCards.map((stat, index) => (
             <Card key={index} className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -191,7 +162,6 @@ const Dashboard = () => {
             </Button>
           )}
         </div>
-      </main>
     </div>
   );
 };
