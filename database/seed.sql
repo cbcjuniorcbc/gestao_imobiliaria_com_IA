@@ -23,27 +23,27 @@ INSERT INTO usuarios (id, username, password_hash, role) VALUES
 -- ============================================
 -- Proprietários
 -- ============================================
-INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, observacoes, pasta_path) VALUES
-('1', 'João Silva', '123.456.789-00', '(11) 98765-4321', 'joao.silva@email.com', 'Rua das Flores, 123 - São Paulo/SP', 'Proprietário desde 2020', '/Proprietario_Joao_Silva'),
-('2', 'Maria Santos', '987.654.321-00', '(11) 91234-5678', 'maria.santos@email.com', 'Av. Paulista, 456 - São Paulo/SP', '', '/Proprietario_Maria_Santos'),
-('3', 'Pedro Costa', '456.789.123-00', '(11) 99876-1234', 'pedro.costa@email.com', 'Rua Vergueiro, 789 - São Paulo/SP', 'Proprietário VIP', '/Proprietario_Pedro_Costa');
+INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, metodo_recebimento, observacoes, pasta_path) VALUES
+('1', 'João Silva', '123.456.789-00', '(11) 98765-4321', 'joao.silva@email.com', 'Rua das Flores, 123 - São Paulo/SP', 'PIX', 'Proprietário desde 2020', '/Proprietario_Joao_Silva'),
+('2', 'Maria Santos', '987.654.321-00', '(11) 91234-5678', 'maria.santos@email.com', 'Av. Paulista, 456 - São Paulo/SP', 'Transferência Bancária', '', '/Proprietario_Maria_Santos'),
+('3', 'Pedro Costa', '456.789.123-00', '(11) 99876-1234', 'pedro.costa@email.com', 'Rua Vergueiro, 789 - São Paulo/SP', 'Boleto', 'Proprietário VIP', '/Proprietario_Pedro_Costa');
 
 -- ============================================
 -- Imóveis
 -- ============================================
-INSERT INTO imoveis (id, proprietario_id, endereco, tipo, valor_aluguel, situacao, observacoes) VALUES
-('1', '1', 'Rua Aurora, 789 - Apt 45 - São Paulo/SP', 'Apartamento', 2500.00, 'Locado', '2 quartos, 1 vaga'),
-('2', '1', 'Rua Consolação, 321 - São Paulo/SP', 'Casa', 3800.00, 'Locado', '3 quartos, 2 vagas'),
-('3', '2', 'Av. Brasil, 1500 - Sala 12 - São Paulo/SP', 'Comercial', 4200.00, 'Disponível', 'Sala comercial 60m²'),
-('4', '3', 'Rua Oscar Freire, 500 - Apt 101 - São Paulo/SP', 'Apartamento', 5500.00, 'Locado', 'Alto padrão, 3 quartos');
+INSERT INTO imoveis (id, proprietario_id, endereco, rua, numero, bairro, cidade, estado, cep, tipo, valor, publicado_internet, situacao, observacoes) VALUES
+('1', '1', 'Rua Aurora, 789 - Apt 45 - São Paulo/SP', 'Rua Aurora', '789', 'Centro', 'São Paulo', 'SP', '01000-000', 'Locação', 2500.00, 0, 'Locado', '2 quartos, 1 vaga'),
+('2', '1', 'Rua Consolação, 321 - São Paulo/SP', 'Rua Consolação', '321', 'Consolação', 'São Paulo', 'SP', '01300-000', 'Locação', 3800.00, 0, 'Locado', '3 quartos, 2 vagas'),
+('3', '2', 'Av. Brasil, 1500 - Sala 12 - São Paulo/SP', 'Av. Brasil', '1500', 'Centro', 'São Paulo', 'SP', '01430-000', 'Ponto Comercial', 4200.00, 0, 'Disponível', 'Sala comercial 60m²'),
+('4', '3', 'Rua Oscar Freire, 500 - Apt 101 - São Paulo/SP', 'Rua Oscar Freire', '500', 'Jardins', 'São Paulo', 'SP', '01422-000', 'Locação', 5500.00, 0, 'Locado', 'Alto padrão, 3 quartos');
 
 -- ============================================
 -- Inquilinos
 -- ============================================
-INSERT INTO inquilinos (id, imovel_id, proprietario_id, nome, cpf_cnpj, telefone, email, data_inicio, data_termino, observacoes, pasta_path) VALUES
-('1', '1', '1', 'Carlos Oliveira', '456.789.123-00', '(11) 99876-5432', 'carlos.oliveira@email.com', '2024-03-01', '2025-03-01', 'Contrato de 12 meses', '/Proprietario_Joao_Silva/Inquilino_Carlos_Oliveira'),
-('2', '2', '1', 'Ana Costa', '789.123.456-00', '(11) 98765-1234', 'ana.costa@email.com', '2024-02-15', NULL, '', '/Proprietario_Joao_Silva/Inquilino_Ana_Costa'),
-('3', '4', '3', 'Roberto Lima', '321.654.987-00', '(11) 97654-3210', 'roberto.lima@email.com', '2024-01-10', '2025-01-10', 'Pagamento pontual', '/Proprietario_Pedro_Costa/Inquilino_Roberto_Lima');
+INSERT INTO inquilinos (id, imovel_id, proprietario_id, nome, cpf, rg, cpf_cnpj, telefone, email, renda_aproximada, data_inicio, data_termino, observacoes, pasta_path) VALUES
+('1', '1', '1', 'Carlos Oliveira', '456.789.123-00', '12.345.678-9', '456.789.123-00', '(11) 99876-5432', 'carlos.oliveira@email.com', 5000.00, '2024-03-01', '2025-03-01', 'Contrato de 12 meses', '/Proprietario_Joao_Silva/Inquilino_Carlos_Oliveira'),
+('2', '2', '1', 'Ana Costa', '789.123.456-00', '98.765.432-1', '789.123.456-00', '(11) 98765-1234', 'ana.costa@email.com', 7500.00, '2024-02-15', NULL, '', '/Proprietario_Joao_Silva/Inquilino_Ana_Costa'),
+('3', '4', '3', 'Roberto Lima', '321.654.987-00', '45.678.912-3', '321.654.987-00', '(11) 97654-3210', 'roberto.lima@email.com', 12000.00, '2024-01-10', '2025-01-10', 'Pagamento pontual', '/Proprietario_Pedro_Costa/Inquilino_Roberto_Lima');
 
 -- ============================================
 -- Boletos
