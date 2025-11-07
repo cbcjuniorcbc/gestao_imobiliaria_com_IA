@@ -85,11 +85,10 @@ const Login = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Digite sua senha"
+                  placeholder="Digite sua senha (deixe em branco se não tiver)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
-                  required
                 />
               </div>
             </div>
