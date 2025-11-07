@@ -1,167 +1,170 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockImoveis, mockBoletos, mockContratosAvulsos } from '@/lib/mockData';
-import { 
-  Building2, 
-  Home, 
-  FileText, 
-  AlertCircle, 
-  TrendingUp,
-  DollarSign,
-  LogOut,
-  Users,
-  Calendar,
-  Settings
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, Home, FileText, AlertCircle, DollarSign, FileSignature } from 'lucide-react';
+import { DashboardStats } from '@/types';
 
 const Dashboard = () => {
-  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState<DashboardStats>({
+    total_imoveis: 0,
+    imoveis_locados: 0,
+    boletos_em_aberto: 0,
+    boletos_atrasados: 0,
+    contratos_avulsos_hoje: 0,
+    valor_total_em_aberto: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Calcular estatísticas
-  const totalImoveis = mockImoveis.length;
-  const imoveisLocados = mockImoveis.filter(i => i.situacao === 'Locado').length;
-  const boletosEmAberto = mockBoletos.filter(b => b.situacao === 'Em aberto').length;
-  
-  const hoje = new Date();
-  const boletosAtrasados = mockBoletos.filter(b => {
-    if (b.situacao === 'Pago') return false;
-    const vencimento = new Date(b.data_vencimento);
-    return vencimento < hoje;
-  }).length;
+  useEffect(() => {
+    loadStats();
+  }, []);
 
-  const contratosHoje = mockContratosAvulsos.filter(c => {
-    const dataContrato = new Date(c.data);
-    return dataContrato.toDateString() === hoje.toDateString();
-  }).length;
-
-  const valorTotalEmAberto = mockBoletos
-    .filter(b => b.situacao === 'Em aberto')
-    .reduce((acc, b) => acc + b.valor_total, 0);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const loadStats = async () => {
+    if (window.electronAPI?.getDashboardStats) {
+      const result = await window.electronAPI.getDashboardStats();
+      if (result.success) {
+        setStats(result.data);
+      }
+    }
+    setLoading(false);
   };
 
   const statCards = [
     {
       title: 'Total de Imóveis',
-      value: totalImoveis,
+      value: stats.total_imoveis,
       icon: Building2,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10'
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
     },
     {
       title: 'Imóveis Locados',
-      value: imoveisLocados,
+      value: stats.imoveis_locados,
       icon: Home,
-      color: 'text-success',
-      bgColor: 'bg-success/10'
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
     },
     {
       title: 'Boletos em Aberto',
-      value: boletosEmAberto,
+      value: stats.boletos_em_aberto,
       icon: FileText,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10'
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
     },
     {
       title: 'Boletos Atrasados',
-      value: boletosAtrasados,
+      value: stats.boletos_atrasados,
       icon: AlertCircle,
-      color: 'text-destructive',
-      bgColor: 'bg-destructive/10'
-    },
-    {
-      title: 'Contratos Hoje',
-      value: contratosHoje,
-      icon: Calendar,
-      color: 'text-info',
-      bgColor: 'bg-info/10'
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
     },
     {
       title: 'Valor em Aberto',
-      value: `R$ ${valorTotalEmAberto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      value: `R$ ${stats.valor_total_em_aberto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10'
-    }
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+    },
+    {
+      title: 'Contratos Avulsos Hoje',
+      value: stats.contratos_avulsos_hoje,
+      icon: FileSignature,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+    },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
-        <p className="text-muted-foreground">
-          Bem-vindo, {user?.username} ({user?.role === 'admin' ? 'Administrador' : 'Recepção'})
-        </p>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Visão geral do sistema de gestão imobiliária</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {statCards.map((stat, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <div className={`${stat.bgColor} p-2 rounded-lg`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {statCards.map((stat, index) => (
+          <Card key={index} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.title}
+              </CardTitle>
+              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button 
-            size="lg" 
-            className="h-24 flex flex-col gap-2"
-            onClick={() => navigate('/proprietarios')}
-          >
-            <Users className="w-6 h-6" />
-            <span>Proprietários</span>
-          </Button>
-          <Button 
-            size="lg" 
-            className="h-24 flex flex-col gap-2"
-            variant="secondary"
-            onClick={() => navigate('/boletos')}
-          >
-            <FileText className="w-6 h-6" />
-            <span>Boletos</span>
-          </Button>
-          <Button 
-            size="lg" 
-            className="h-24 flex flex-col gap-2"
-            variant="outline"
-            onClick={() => navigate('/contratos-avulsos')}
-          >
-            <Calendar className="w-6 h-6" />
-            <span>Contratos Avulsos</span>
-          </Button>
-          {isAdmin && (
-            <Button 
-              size="lg" 
-              className="h-24 flex flex-col gap-2"
-              variant="outline"
-              onClick={() => navigate('/configuracoes')}
-            >
-              <Settings className="w-6 h-6" />
-              <span>Configurações</span>
-            </Button>
-          )}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <Card className="hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/proprietarios')}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Proprietários
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Gerencie proprietários, imóveis e inquilinos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/boletos')}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Boletos e Pagamentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Controle de boletos e histórico de pagamentos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/contratos-avulsos')}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5" />
+              Contratos Avulsos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Registro de contratos e serviços avulsos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/configuracoes')}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Configurações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Gerenciar usuários e configurações do sistema
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

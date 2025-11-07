@@ -301,6 +301,16 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
 });
 
 // Imóveis
+ipcMain.handle('imoveis:getAll', async () => {
+  try {
+    const result = db.exec('SELECT * FROM imoveis ORDER BY endereco');
+    const imoveis = resultToArray(result);
+    return { success: true, data: imoveis };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('imoveis:getByProprietario', async (event, proprietarioId) => {
   try {
     const result = db.exec('SELECT * FROM imoveis WHERE proprietario_id = ?', [proprietarioId]);
@@ -311,7 +321,58 @@ ipcMain.handle('imoveis:getByProprietario', async (event, proprietarioId) => {
   }
 });
 
+ipcMain.handle('imoveis:getById', async (event, id) => {
+  try {
+    const result = db.exec('SELECT * FROM imoveis WHERE id = ?', [id]);
+    const imoveis = resultToArray(result);
+    return { success: true, data: imoveis[0] || null };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Inquilinos
+ipcMain.handle('inquilinos:getAll', async () => {
+  try {
+    const result = db.exec('SELECT * FROM inquilinos ORDER BY nome');
+    const inquilinos = resultToArray(result);
+    return { success: true, data: inquilinos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('inquilinos:getByImovel', async (event, imovelId) => {
+  try {
+    const result = db.exec('SELECT * FROM inquilinos WHERE imovel_id = ?', [imovelId]);
+    const inquilinos = resultToArray(result);
+    return { success: true, data: inquilinos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('inquilinos:getById', async (event, id) => {
+  try {
+    const result = db.exec('SELECT * FROM inquilinos WHERE id = ?', [id]);
+    const inquilinos = resultToArray(result);
+    return { success: true, data: inquilinos[0] || null };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Boletos
+ipcMain.handle('boletos:getAll', async () => {
+  try {
+    const result = db.exec('SELECT * FROM boletos ORDER BY data_vencimento DESC');
+    const boletos = resultToArray(result);
+    return { success: true, data: boletos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('boletos:getByInquilino', async (event, inquilinoId) => {
   try {
     const result = db.exec('SELECT * FROM boletos WHERE inquilino_id = ? ORDER BY data_vencimento DESC', [inquilinoId]);
@@ -346,6 +407,95 @@ ipcMain.handle('boletos:marcarPago', async (event, { boletoId, userId, userName 
     return { success: false, error: error.message };
   }
 });
+
+// Documentos
+ipcMain.handle('documentos:getByOwner', async (event, { ownerType, ownerId }) => {
+  try {
+    const result = db.exec('SELECT * FROM documentos WHERE owner_type = ? AND owner_id = ? ORDER BY uploaded_at DESC', [ownerType, ownerId]);
+    const documentos = resultToArray(result);
+    return { success: true, data: documentos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Logs
+ipcMain.handle('logs:getAll', async () => {
+  try {
+    const result = db.exec('SELECT * FROM logs_acoes ORDER BY timestamp DESC LIMIT 100');
+    const logs = resultToArray(result);
+    return { success: true, data: logs };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Contratos Avulsos
+ipcMain.handle('contratos_avulsos:getAll', async () => {
+  try {
+    const result = db.exec('SELECT * FROM contratos_avulsos ORDER BY data DESC');
+    const contratos = resultToArray(result);
+    return { success: true, data: contratos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('contratos_avulsos:create', async (event, { data, descricao, valor, userId, userName }) => {
+  try {
+    const id = Date.now().toString();
+    
+    db.run(
+      `INSERT INTO contratos_avulsos (id, data, descricao, valor, registrado_por)
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, data, descricao, valor, userName]
+    );
+    
+    saveDatabase();
+    
+    // Log da ação
+    logAction(event.sender.id, userId, userName, 
+              'Contrato Avulso', `Registrou contrato avulso: ${descricao} - R$ ${valor.toFixed(2)}`);
+    
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Dashboard Stats
+ipcMain.handle('dashboard:getStats', async () => {
+  try {
+    const stats = {};
+    
+    // Total de imóveis
+    let result = db.exec('SELECT COUNT(*) as total FROM imoveis');
+    stats.total_imoveis = resultToArray(result)[0]?.total || 0;
+    
+    // Imóveis locados
+    result = db.exec("SELECT COUNT(*) as total FROM imoveis WHERE situacao = 'Locado'");
+    stats.imoveis_locados = resultToArray(result)[0]?.total || 0;
+    
+    // Boletos em aberto
+    result = db.exec("SELECT COUNT(*) as total FROM boletos WHERE situacao = 'Em aberto'");
+    stats.boletos_em_aberto = resultToArray(result)[0]?.total || 0;
+    
+    // Boletos atrasados
+    result = db.exec("SELECT COUNT(*) as total FROM boletos WHERE situacao = 'Em aberto' AND date(data_vencimento) < date('now')");
+    stats.boletos_atrasados = resultToArray(result)[0]?.total || 0;
+    
+    // Valor total em aberto
+    result = db.exec("SELECT COALESCE(SUM(valor_total), 0) as total FROM boletos WHERE situacao = 'Em aberto'");
+    stats.valor_total_em_aberto = resultToArray(result)[0]?.total || 0;
+    
+    // Contratos avulsos hoje
+    result = db.exec("SELECT COUNT(*) as total FROM contratos_avulsos WHERE date(data) = date('now')");
+    stats.contratos_avulsos_hoje = resultToArray(result)[0]?.total || 0;
+    
+    return { success: true, data: stats };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 
 // Upload de arquivo
 ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, userId }) => {

@@ -1,11 +1,70 @@
+import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Proprietario, Imovel } from '@/types';
+import { mockProprietarios, mockImoveis } from '@/lib/mockData';
 
 const ProprietarioDetalhes = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [proprietario, setProprietario] = useState<Proprietario | null>(null);
+  const [imoveis, setImoveis] = useState<Imovel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, [id]);
+
+  const loadData = async () => {
+    if (window.electronAPI?.getProprietarios && window.electronAPI?.getImoveisByProprietario) {
+      const propResult = await window.electronAPI.getProprietarios();
+      if (propResult.success) {
+        const prop = propResult.data.find((p: Proprietario) => p.id === id);
+        setProprietario(prop || null);
+      }
+
+      const imoveisResult = await window.electronAPI.getImoveisByProprietario(id);
+      if (imoveisResult.success) {
+        setImoveis(imoveisResult.data);
+      }
+    } else {
+      // Fallback para mock
+      const prop = mockProprietarios.find(p => p.id === id);
+      setProprietario(prop || null);
+      setImoveis(mockImoveis.filter(i => i.proprietario_id === id));
+    }
+    setLoading(false);
+  };
+
+  const getSituacaoColor = (situacao: string) => {
+    switch (situacao) {
+      case 'Locado': return 'bg-green-100 text-green-800';
+      case 'Disponível': return 'bg-blue-100 text-blue-800';
+      case 'Manutenção': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Carregando...</p></div>;
+  }
+
+  if (!proprietario) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/proprietarios")}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">Proprietário não encontrado</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -18,14 +77,91 @@ const ProprietarioDetalhes = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Proprietário ID: {id}</CardTitle>
+          <CardTitle className="flex items-start justify-between">
+            <span className="text-2xl">{proprietario.nome}</span>
+            <div className="text-xs font-normal text-muted-foreground bg-primary/10 px-3 py-1 rounded">
+              {proprietario.cpf_cnpj}
+            </div>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Página de detalhes em desenvolvimento.
-          </p>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <Mail className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{proprietario.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Phone className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Telefone</p>
+                <p className="font-medium">{proprietario.telefone}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+            <div>
+              <p className="text-sm text-muted-foreground">Endereço</p>
+              <p className="font-medium">{proprietario.endereco}</p>
+            </div>
+          </div>
+          {proprietario.observacoes && (
+            <div className="pt-2 border-t">
+              <p className="text-sm text-muted-foreground">Observações</p>
+              <p className="mt-1">{proprietario.observacoes}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <div>
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <Building2 className="h-6 w-6" />
+          Imóveis ({imoveis.length})
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {imoveis.map((imovel) => (
+            <Card 
+              key={imovel.id} 
+              className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
+              onClick={() => navigate(`/imoveis/${imovel.id}`)}
+            >
+              <CardHeader>
+                <CardTitle className="text-lg flex items-start justify-between">
+                  <span>{imovel.tipo}</span>
+                  <span className={`text-xs px-2 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
+                    {imovel.situacao}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{imovel.endereco}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Valor do Aluguel</span>
+                  <span className="font-bold text-lg text-green-600">
+                    R$ {imovel.valor_aluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {imovel.observacoes && (
+                  <p className="text-xs text-muted-foreground">{imovel.observacoes}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {imoveis.length === 0 && (
+          <Card className="p-12 text-center">
+            <p className="text-muted-foreground">Nenhum imóvel cadastrado para este proprietário</p>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

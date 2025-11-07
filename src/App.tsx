@@ -12,6 +12,8 @@ import Dashboard from "./pages/Dashboard";
 import Proprietarios from "./pages/Proprietarios";
 import ProprietarioDetalhes from "./pages/ProprietarioDetalhes";
 import NovoProprietario from "./pages/NovoProprietario";
+import ImovelDetalhes from "./pages/ImovelDetalhes";
+import InquilinoDetalhes from "./pages/InquilinoDetalhes";
 import Boletos from "./pages/Boletos";
 import ContratosAvulsos from "./pages/ContratosAvulsos";
 import Configuracoes from "./pages/Configuracoes";
@@ -45,62 +47,15 @@ const AppContent = () => {
           </div>
           <div className="p-6">
             <Routes>
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/proprietarios"
-                element={
-                  <ProtectedRoute>
-                    <Proprietarios />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/proprietarios/novo"
-                element={
-                  <ProtectedRoute>
-                    <NovoProprietario />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/proprietarios/:id"
-                element={
-                  <ProtectedRoute>
-                    <ProprietarioDetalhes />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/boletos"
-                element={
-                  <ProtectedRoute>
-                    <Boletos />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/contratos-avulsos"
-                element={
-                  <ProtectedRoute>
-                    <ContratosAvulsos />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/configuracoes"
-                element={
-                  <ProtectedRoute adminOnly>
-                    <Configuracoes />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/proprietarios" element={<ProtectedRoute><Proprietarios /></ProtectedRoute>} />
+              <Route path="/proprietarios/novo" element={<ProtectedRoute><NovoProprietario /></ProtectedRoute>} />
+              <Route path="/proprietarios/:id" element={<ProtectedRoute><ProprietarioDetalhes /></ProtectedRoute>} />
+              <Route path="/imoveis/:id" element={<ProtectedRoute><ImovelDetalhes /></ProtectedRoute>} />
+              <Route path="/inquilinos/:id" element={<ProtectedRoute><InquilinoDetalhes /></ProtectedRoute>} />
+              <Route path="/boletos" element={<ProtectedRoute><Boletos /></ProtectedRoute>} />
+              <Route path="/contratos-avulsos" element={<ProtectedRoute><ContratosAvulsos /></ProtectedRoute>} />
+              <Route path="/configuracoes" element={<ProtectedRoute adminOnly><Configuracoes /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
