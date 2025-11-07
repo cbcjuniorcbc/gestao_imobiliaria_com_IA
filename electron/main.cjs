@@ -211,7 +211,7 @@ ipcMain.handle('auth:login', async (event, { username, password }) => {
 // Usuários - Listar todos
 ipcMain.handle('usuarios:getAll', async () => {
   try {
-    const result = db.exec('SELECT id, username, role, created_at FROM usuarios ORDER BY username');
+    const result = db.exec('SELECT id, username, role, criado_em as created_at FROM usuarios ORDER BY username');
     const usuarios = resultToArray(result);
     return { success: true, users: usuarios };
   } catch (error) {

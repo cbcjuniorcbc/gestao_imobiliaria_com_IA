@@ -1,4 +1,4 @@
-import { Home, Users, Building2, Settings as SettingsIcon, LogOut, ChevronRight } from "lucide-react";
+import { Home, Users, Building2, FileText, Calendar, Settings as SettingsIcon, LogOut, ChevronRight } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,8 @@ export function AppSidebar() {
   const mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Proprietários", url: "/proprietarios", icon: Building2 },
+    { title: "Boletos", url: "/boletos", icon: FileText },
+    { title: "Contratos Avulsos", url: "/contratos-avulsos", icon: Calendar },
   ];
 
   const adminItems = isAdmin

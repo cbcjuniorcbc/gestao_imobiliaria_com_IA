@@ -40,7 +40,7 @@ const Proprietarios = () => {
                 className="pl-10"
               />
             </div>
-            <Button>
+            <Button onClick={() => navigate('/proprietarios/novo')}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Proprietário
             </Button>

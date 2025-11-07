@@ -10,6 +10,10 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Proprietarios from "./pages/Proprietarios";
+import ProprietarioDetalhes from "./pages/ProprietarioDetalhes";
+import NovoProprietario from "./pages/NovoProprietario";
+import Boletos from "./pages/Boletos";
+import ContratosAvulsos from "./pages/ContratosAvulsos";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
@@ -54,6 +58,38 @@ const AppContent = () => {
                 element={
                   <ProtectedRoute>
                     <Proprietarios />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/proprietarios/novo"
+                element={
+                  <ProtectedRoute>
+                    <NovoProprietario />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/proprietarios/:id"
+                element={
+                  <ProtectedRoute>
+                    <ProprietarioDetalhes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/boletos"
+                element={
+                  <ProtectedRoute>
+                    <Boletos />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/contratos-avulsos"
+                element={
+                  <ProtectedRoute>
+                    <ContratosAvulsos />
                   </ProtectedRoute>
                 }
               />
