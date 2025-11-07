@@ -1,0 +1,98 @@
+export type UserRole = 'recepcao' | 'admin';
+
+export interface User {
+  id: string;
+  username: string;
+  role: UserRole;
+  criado_em: string;
+}
+
+export interface Proprietario {
+  id: string;
+  nome: string;
+  cpf_cnpj: string;
+  telefone: string;
+  email: string;
+  endereco: string;
+  observacoes?: string;
+  pasta_path: string;
+  criado_em: string;
+}
+
+export interface Imovel {
+  id: string;
+  proprietario_id: string;
+  endereco: string;
+  tipo: string;
+  valor_aluguel: number;
+  situacao: 'Disponível' | 'Locado' | 'Manutenção';
+  observacoes?: string;
+  criado_em: string;
+}
+
+export interface Inquilino {
+  id: string;
+  imovel_id: string;
+  proprietario_id: string;
+  nome: string;
+  cpf_cnpj: string;
+  telefone: string;
+  email: string;
+  data_inicio: string;
+  data_termino?: string;
+  observacoes?: string;
+  pasta_path: string;
+  criado_em: string;
+}
+
+export interface Documento {
+  id: string;
+  owner_type: 'proprietario' | 'inquilino';
+  owner_id: string;
+  filename: string;
+  path: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+export interface Boleto {
+  id: string;
+  inquilino_id: string;
+  acao: string;
+  valor_total: number;
+  forma_pagamento: string;
+  data_vencimento: string;
+  data_inicio?: string;
+  data_termino?: string;
+  situacao: 'Em aberto' | 'Pago';
+  data_pagamento?: string;
+  observacoes?: string;
+  criado_em: string;
+}
+
+export interface LogAcao {
+  id: string;
+  usuario_id: string;
+  usuario_nome: string;
+  acao_tipo: string;
+  descricao: string;
+  timestamp: string;
+}
+
+export interface ContratoAvulso {
+  id: string;
+  data: string;
+  descricao: string;
+  valor: number;
+  registrado_por: string;
+  criado_em: string;
+}
+
+export interface DashboardStats {
+  total_imoveis: number;
+  imoveis_locados: number;
+  boletos_em_aberto: number;
+  boletos_atrasados: number;
+  contratos_avulsos_hoje: number;
+  valor_total_em_aberto: number;
+}
