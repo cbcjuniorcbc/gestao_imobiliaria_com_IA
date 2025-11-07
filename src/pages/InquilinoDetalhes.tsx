@@ -118,7 +118,7 @@ const InquilinoDetalhes = () => {
   if (!inquilino) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/inquilinos')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <Card>
@@ -133,7 +133,7 @@ const InquilinoDetalhes = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/inquilinos')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-3xl font-bold">Detalhes do Inquilino</h1>

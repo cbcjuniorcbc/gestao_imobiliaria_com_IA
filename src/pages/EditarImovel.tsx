@@ -91,8 +91,8 @@ const EditarImovel = () => {
           publicado_internet: formData.publicado_internet ? 1 : 0,
           situacao: formData.situacao,
           observacoes: formData.observacoes,
-          userId: user?.id,
-          userName: user?.username
+          user_id: user?.id,
+          user_name: user?.username
         });
 
         if (result.success) {
@@ -122,7 +122,7 @@ const EditarImovel = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5 p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/imoveis/${id}`)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-3xl font-bold">Editar Imóvel</h1>
@@ -286,7 +286,7 @@ const EditarImovel = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/imoveis/${id}`)}
+                  onClick={() => navigate("/")}
                   className="flex-1"
                 >
                   Cancelar

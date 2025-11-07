@@ -88,7 +88,7 @@ const ProprietarioDetalhes = () => {
   if (!proprietario) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/proprietarios")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <Card>
@@ -103,7 +103,7 @@ const ProprietarioDetalhes = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/proprietarios")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-3xl font-bold">Detalhes do Proprietário</h1>

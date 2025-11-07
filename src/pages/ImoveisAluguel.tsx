@@ -84,7 +84,7 @@ const ImoveisAluguel = () => {
       <header className="bg-card border-b shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="outline" size="icon" onClick={() => navigate('/dashboard')}>
+            <Button variant="outline" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>

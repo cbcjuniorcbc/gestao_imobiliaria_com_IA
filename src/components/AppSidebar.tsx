@@ -23,6 +23,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   const mainItems = [
+    { title: "Home", url: "/", icon: Home },
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Proprietários", url: "/proprietarios", icon: Building2 },
     { title: "Inquilinos", url: "/inquilinos", icon: Users },
