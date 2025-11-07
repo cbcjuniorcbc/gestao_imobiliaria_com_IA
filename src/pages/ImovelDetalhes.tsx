@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const ImovelDetalhes = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [proprietario, setProprietario] = useState<Proprietario | null>(null);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
@@ -106,23 +106,25 @@ const ImovelDetalhes = () => {
               <Button variant="ghost" size="icon" onClick={() => navigate(`/imoveis/${id}/editar`)}>
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={async () => {
-                if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este imóvel?')) {
-                  const result = await (window.electronAPI as any).deleteImovel({ 
-                    id: imovel.id, 
-                    userId: user.id, 
-                    userName: user.username 
-                  });
-                  if (result.success) {
-                    toast.success('Imóvel removido com sucesso!');
-                    navigate(getBackPath());
-                  } else {
-                    toast.error(result.error || 'Erro ao remover imóvel');
+              {isAdmin && (
+                <Button variant="ghost" size="icon" onClick={async () => {
+                  if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este imóvel?')) {
+                    const result = await (window.electronAPI as any).deleteImovel({ 
+                      id: imovel.id, 
+                      userId: user.id, 
+                      userName: user.username 
+                    });
+                    if (result.success) {
+                      toast.success('Imóvel removido com sucesso!');
+                      navigate(getBackPath());
+                    } else {
+                      toast.error(result.error || 'Erro ao remover imóvel');
+                    }
                   }
-                }
-              }}>
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
+                }}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              )}
             </div>
           </CardTitle>
         </CardHeader>
@@ -247,24 +249,26 @@ const ImovelDetalhes = () => {
                     <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/inquilinos/${inquilino.id}/editar`); }}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={async (e) => {
-                      e.stopPropagation();
-                      if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este inquilino?')) {
-                        const result = await (window.electronAPI as any).deleteInquilino({ 
-                          id: inquilino.id, 
-                          userId: user.id, 
-                          userName: user.username 
-                        });
-                        if (result.success) {
-                          toast.success('Inquilino removido com sucesso!');
-                          loadData();
-                        } else {
-                          toast.error(result.error || 'Erro ao remover inquilino');
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" onClick={async (e) => {
+                        e.stopPropagation();
+                        if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este inquilino?')) {
+                          const result = await (window.electronAPI as any).deleteInquilino({ 
+                            id: inquilino.id, 
+                            userId: user.id, 
+                            userName: user.username 
+                          });
+                          if (result.success) {
+                            toast.success('Inquilino removido com sucesso!');
+                            loadData();
+                          } else {
+                            toast.error(result.error || 'Erro ao remover inquilino');
+                          }
                         }
-                      }
-                    }}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                      }}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </CardTitle>
               </CardHeader>

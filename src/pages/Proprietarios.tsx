@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Proprietarios = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [proprietarios, setProprietarios] = useState(mockProprietarios);
   const [loading, setLoading] = useState(true);
@@ -117,9 +117,11 @@ const Proprietarios = () => {
                     <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/proprietarios/${proprietario.id}/editar`); }}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setProprietarioToDelete(proprietario.id); setDeleteDialogOpen(true); }}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setProprietarioToDelete(proprietario.id); setDeleteDialogOpen(true); }}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </CardTitle>
               </CardHeader>

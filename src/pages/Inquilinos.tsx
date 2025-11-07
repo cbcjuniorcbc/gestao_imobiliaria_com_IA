@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Inquilinos = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,9 +107,11 @@ const Inquilinos = () => {
                     <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/inquilinos/${inquilino.id}/editar`); }}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setInquilinoToDelete(inquilino.id); setDeleteDialogOpen(true); }}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setInquilinoToDelete(inquilino.id); setDeleteDialogOpen(true); }}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </CardTitle>
               </CardHeader>

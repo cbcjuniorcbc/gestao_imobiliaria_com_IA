@@ -13,7 +13,7 @@ import { toast as sonnerToast } from 'sonner';
 const InquilinoDetalhes = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [inquilino, setInquilino] = useState<Inquilino | null>(null);
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
@@ -152,23 +152,25 @@ const InquilinoDetalhes = () => {
               <Button variant="ghost" size="icon" onClick={() => navigate(`/inquilinos/${id}/editar`)}>
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={async () => {
-                if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este inquilino?')) {
-                  const result = await (window.electronAPI as any).deleteInquilino({ 
-                    id: inquilino.id, 
-                    userId: user.id, 
-                    userName: user.username 
-                  });
-                  if (result.success) {
-                    sonnerToast.success('Inquilino removido com sucesso!');
-                    navigate('/inquilinos');
-                  } else {
-                    sonnerToast.error(result.error || 'Erro ao remover inquilino');
+              {isAdmin && (
+                <Button variant="ghost" size="icon" onClick={async () => {
+                  if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este inquilino?')) {
+                    const result = await (window.electronAPI as any).deleteInquilino({ 
+                      id: inquilino.id, 
+                      userId: user.id, 
+                      userName: user.username 
+                    });
+                    if (result.success) {
+                      sonnerToast.success('Inquilino removido com sucesso!');
+                      navigate('/inquilinos');
+                    } else {
+                      sonnerToast.error(result.error || 'Erro ao remover inquilino');
+                    }
                   }
-                }
-              }}>
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
+                }}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              )}
             </div>
           </CardTitle>
         </CardHeader>
