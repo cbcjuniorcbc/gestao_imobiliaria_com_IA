@@ -1,8 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
-const bcrypt = require('bcrypt');
+const initSqlJs = require('sql.js');
+const bcrypt = require('bcryptjs');
 
 let mainWindow;
 let db;
@@ -55,30 +55,35 @@ function removeDatabaseLock() {
 }
 
 // Inicializar banco de dados
-function initializeDatabase() {
+async function initializeDatabase() {
   const dbPath = path.join(rootPath, 'database.db');
   
   try {
-    db = new Database(dbPath, { verbose: console.log });
-    db.pragma('journal_mode = WAL'); // Write-Ahead Logging para performance
+    const SQL = await initSqlJs();
     
-    // Executar schema se banco estiver vazio
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-    
-    if (tables.length === 0) {
+    // Carregar banco existente ou criar novo
+    if (fs.existsSync(dbPath)) {
+      const buffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(buffer);
+    } else {
+      db = new SQL.Database();
+      
       console.log('Banco vazio. Executando schema...');
       const schemaSQL = fs.readFileSync(
         path.join(__dirname, '../database/schema.sql'),
         'utf8'
       );
-      db.exec(schemaSQL);
+      db.run(schemaSQL);
       
       // Executar seed data
       const seedSQL = fs.readFileSync(
         path.join(__dirname, '../database/seed.sql'),
         'utf8'
       );
-      db.exec(seedSQL);
+      db.run(seedSQL);
+      
+      // Salvar banco inicial
+      saveDatabase();
       
       console.log('Banco inicializado com sucesso!');
     }
@@ -89,6 +94,15 @@ function initializeDatabase() {
     dialog.showErrorBox('Erro de Banco de Dados', `Não foi possível conectar ao banco:\n${error.message}`);
     app.quit();
   }
+}
+
+// Salvar banco em disco
+function saveDatabase() {
+  if (!db) return;
+  const dbPath = path.join(rootPath, 'database.db');
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbPath, buffer);
 }
 
 // Criar pastas para proprietários/inquilinos
@@ -133,11 +147,16 @@ function createWindow() {
 // Autenticação
 ipcMain.handle('auth:login', async (event, { username, password }) => {
   try {
-    const user = db.prepare('SELECT * FROM usuarios WHERE username = ?').get(username);
+    const result = db.exec('SELECT * FROM usuarios WHERE username = ?', [username]);
     
-    if (!user) {
+    if (!result || result.length === 0 || result[0].values.length === 0) {
       return { success: false, error: 'Usuário não encontrado' };
     }
+    
+    const columns = result[0].columns;
+    const values = result[0].values[0];
+    const user = {};
+    columns.forEach((col, i) => user[col] = values[i]);
     
     const isValid = await bcrypt.compare(password, user.password_hash);
     
@@ -157,7 +176,8 @@ ipcMain.handle('auth:login', async (event, { username, password }) => {
 // Proprietários
 ipcMain.handle('proprietarios:getAll', async () => {
   try {
-    const proprietarios = db.prepare('SELECT * FROM proprietarios ORDER BY nome').all();
+    const result = db.exec('SELECT * FROM proprietarios ORDER BY nome');
+    const proprietarios = resultToArray(result);
     return { success: true, data: proprietarios };
   } catch (error) {
     return { success: false, error: error.message };
@@ -169,11 +189,14 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
     const id = Date.now().toString();
     const pasta_path = `/Proprietario_${proprietario.nome.replace(/\s+/g, '_')}`;
     
-    db.prepare(`
-      INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, observacoes, pasta_path)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, proprietario.nome, proprietario.cpf_cnpj, proprietario.telefone, 
-           proprietario.email, proprietario.endereco, proprietario.observacoes || '', pasta_path);
+    db.run(
+      `INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, observacoes, pasta_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, proprietario.nome, proprietario.cpf_cnpj, proprietario.telefone, 
+       proprietario.email, proprietario.endereco, proprietario.observacoes || '', pasta_path]
+    );
+    
+    saveDatabase();
     
     // Criar pasta física
     createFolder(pasta_path);
@@ -191,7 +214,8 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
 // Imóveis
 ipcMain.handle('imoveis:getByProprietario', async (event, proprietarioId) => {
   try {
-    const imoveis = db.prepare('SELECT * FROM imoveis WHERE proprietario_id = ?').all(proprietarioId);
+    const result = db.exec('SELECT * FROM imoveis WHERE proprietario_id = ?', [proprietarioId]);
+    const imoveis = resultToArray(result);
     return { success: true, data: imoveis };
   } catch (error) {
     return { success: false, error: error.message };
@@ -201,7 +225,8 @@ ipcMain.handle('imoveis:getByProprietario', async (event, proprietarioId) => {
 // Boletos
 ipcMain.handle('boletos:getByInquilino', async (event, inquilinoId) => {
   try {
-    const boletos = db.prepare('SELECT * FROM boletos WHERE inquilino_id = ? ORDER BY data_vencimento DESC').all(inquilinoId);
+    const result = db.exec('SELECT * FROM boletos WHERE inquilino_id = ? ORDER BY data_vencimento DESC', [inquilinoId]);
+    const boletos = resultToArray(result);
     return { success: true, data: boletos };
   } catch (error) {
     return { success: false, error: error.message };
@@ -210,13 +235,18 @@ ipcMain.handle('boletos:getByInquilino', async (event, inquilinoId) => {
 
 ipcMain.handle('boletos:marcarPago', async (event, { boletoId, userId, userName }) => {
   try {
-    const boleto = db.prepare('SELECT * FROM boletos WHERE id = ?').get(boletoId);
+    const result = db.exec('SELECT * FROM boletos WHERE id = ?', [boletoId]);
+    const boletos = resultToArray(result);
+    const boleto = boletos[0];
     
-    db.prepare(`
-      UPDATE boletos 
-      SET situacao = 'Pago', data_pagamento = datetime('now', 'localtime')
-      WHERE id = ?
-    `).run(boletoId);
+    db.run(
+      `UPDATE boletos 
+       SET situacao = 'Pago', data_pagamento = datetime('now', 'localtime')
+       WHERE id = ?`,
+      [boletoId]
+    );
+    
+    saveDatabase();
     
     // Log da ação
     logAction(event.sender.id, userId, userName, 
@@ -234,11 +264,13 @@ ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, us
     // Obter pasta do proprietário/inquilino
     let folderPath;
     if (ownerType === 'proprietario') {
-      const prop = db.prepare('SELECT pasta_path FROM proprietarios WHERE id = ?').get(ownerId);
-      folderPath = prop.pasta_path;
+      const result = db.exec('SELECT pasta_path FROM proprietarios WHERE id = ?', [ownerId]);
+      const props = resultToArray(result);
+      folderPath = props[0].pasta_path;
     } else {
-      const inq = db.prepare('SELECT pasta_path FROM inquilinos WHERE id = ?').get(ownerId);
-      folderPath = inq.pasta_path;
+      const result = db.exec('SELECT pasta_path FROM inquilinos WHERE id = ?', [ownerId]);
+      const inqs = resultToArray(result);
+      folderPath = inqs[0].pasta_path;
     }
     
     // Criar pasta se não existir
@@ -250,10 +282,13 @@ ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, us
     
     // Registrar no banco
     const id = Date.now().toString();
-    db.prepare(`
-      INSERT INTO documentos (id, owner_type, owner_id, filename, path, uploaded_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, ownerType, ownerId, file.name, filePath, userId);
+    db.run(
+      `INSERT INTO documentos (id, owner_type, owner_id, filename, path, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, ownerType, ownerId, file.name, filePath, userId]
+    );
+    
+    saveDatabase();
     
     return { success: true, id, path: filePath };
   } catch (error) {
@@ -264,10 +299,26 @@ ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, us
 // Função auxiliar de log
 function logAction(senderId, userId, userName, acaoTipo, descricao) {
   const id = Date.now().toString();
-  db.prepare(`
-    INSERT INTO logs_acoes (id, usuario_id, usuario_nome, acao_tipo, descricao)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, userId, userName, acaoTipo, descricao);
+  db.run(
+    `INSERT INTO logs_acoes (id, usuario_id, usuario_nome, acao_tipo, descricao)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, userId, userName, acaoTipo, descricao]
+  );
+  saveDatabase();
+}
+
+// Converter resultado sql.js para array de objetos
+function resultToArray(result) {
+  if (!result || result.length === 0 || result[0].values.length === 0) {
+    return [];
+  }
+  
+  const columns = result[0].columns;
+  return result[0].values.map(row => {
+    const obj = {};
+    columns.forEach((col, i) => obj[col] = row[i]);
+    return obj;
+  });
 }
 
 // Selecionar nova pasta raiz (admin)
@@ -288,7 +339,7 @@ ipcMain.handle('config:selectRootPath', async () => {
 // INICIALIZAÇÃO DO APP
 // ========================================
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Definir pasta raiz
   rootPath = getDefaultRootPath();
   
@@ -298,7 +349,7 @@ app.whenReady().then(() => {
   }
   
   // Inicializar banco
-  initializeDatabase();
+  await initializeDatabase();
   
   // Criar janela
   createWindow();

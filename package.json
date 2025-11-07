@@ -46,8 +46,7 @@
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@tanstack/react-query": "^5.83.0",
-    "bcrypt": "^6.0.0",
-    "better-sqlite3": "^12.4.1",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -64,6 +63,7 @@
     "react-router-dom": "^6.30.1",
     "recharts": "^2.15.4",
     "sonner": "^1.7.4",
+    "sql.js": "^1.13.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
@@ -94,33 +94,36 @@
     "wait-on": "^9.0.1"
   },
   "build": {
-  "appId": "com.gestao.imobiliaria",
-  "productName": "Gestão Imobiliária",
-  "win": {
-    "target": ["nsis", "portable"],
-    "icon": "build/icon.ico"
-  },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true,
-    "shortcutName": "Gestão Imobiliária"
-  },
-  "files": [
-    "dist/**/*",
-    "electron/**/*",
-    "database/**/*"
-  ],
-  "extraResources": [
-    {
-      "from": "database",
-      "to": "database"
+    "appId": "com.gestao.imobiliaria",
+    "productName": "Gestão Imobiliária",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Gestão Imobiliária"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "database/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "database",
+        "to": "database"
+      }
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
     }
-  ],
-  "directories": {
-    "buildResources": "build",
-    "output": "release"
   }
-}
 }
