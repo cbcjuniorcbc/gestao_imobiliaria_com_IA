@@ -128,11 +128,14 @@ function createWindow() {
   });
 
   // Carregar app
-  if (process.env.NODE_ENV === 'development') {
+  const distPath = path.join(__dirname, '../dist/index.html');
+  const isDevelopment = !fs.existsSync(distPath);
+  
+  if (isDevelopment) {
     mainWindow.loadURL('http://localhost:8080');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(distPath);
   }
 
   mainWindow.on('closed', () => {
