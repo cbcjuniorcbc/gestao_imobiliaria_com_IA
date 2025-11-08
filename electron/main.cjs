@@ -641,6 +641,28 @@ ipcMain.handle('boletos:marcarPago', async (event, { boletoId, userId, userName 
   }
 });
 
+ipcMain.handle('boletos:delete', async (event, { boletoId, userId, userName }) => {
+  try {
+    const result = db.exec('SELECT * FROM boletos WHERE id = ?', [boletoId]);
+    const boletos = resultToArray(result);
+    const boleto = boletos[0];
+    
+    if (!boleto) {
+      return { success: false, error: 'Boleto não encontrado' };
+    }
+    
+    db.run('DELETE FROM boletos WHERE id = ?', [boletoId]);
+    saveDatabase();
+    
+    logAction(event.sender.id, userId, userName, 
+              'Exclusão', `Excluiu boleto: ${boleto.acao} - R$ ${boleto.valor_total.toFixed(2)}`);
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Documentos
 ipcMain.handle('documentos:getByOwner', async (event, { ownerType, ownerId }) => {
   try {
@@ -779,6 +801,28 @@ ipcMain.handle('contratos_avulsos:create', async (event, { data, descricao, valo
               'Contrato Avulso', `Registrou contrato avulso: ${descricao} - R$ ${valor.toFixed(2)}`);
     
     return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('contratos_avulsos:delete', async (event, { contratoId, userId, userName }) => {
+  try {
+    const result = db.exec('SELECT * FROM contratos_avulsos WHERE id = ?', [contratoId]);
+    const contratos = resultToArray(result);
+    const contrato = contratos[0];
+    
+    if (!contrato) {
+      return { success: false, error: 'Contrato avulso não encontrado' };
+    }
+    
+    db.run('DELETE FROM contratos_avulsos WHERE id = ?', [contratoId]);
+    saveDatabase();
+    
+    logAction(event.sender.id, userId, userName, 
+              'Exclusão', `Excluiu contrato avulso: ${contrato.descricao} - R$ ${contrato.valor.toFixed(2)}`);
+    
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }

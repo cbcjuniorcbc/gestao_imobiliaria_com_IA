@@ -5,17 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileSignature } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, FileSignature, Trash2 } from "lucide-react";
 import { ContratoAvulso } from '@/types';
 import { mockContratosAvulsos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ContratosAvulsos = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [contratos, setContratos] = useState<ContratoAvulso[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [contratoToDelete, setContratoToDelete] = useState<string | null>(null);
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
+  const [mesSelecionado, setMesSelecionado] = useState<string>('');
   const [formData, setFormData] = useState({
     data: new Date().toISOString().split('T')[0],
     descricao: '',
@@ -89,9 +103,67 @@ const ContratosAvulsos = () => {
     }
   };
 
-  const contratosHoje = contratos.filter(c => c.data === new Date().toISOString().split('T')[0]);
+  const handleDelete = async (contratoId: string) => {
+    if (!window.electronAPI || !user) return;
+
+    const result = await (window.electronAPI as any).deleteContratoAvulso({
+      contratoId,
+      userId: user.id,
+      userName: user.username
+    });
+
+    if (result.success) {
+      toast({
+        title: "Sucesso",
+        description: "Contrato avulso excluído com sucesso",
+      });
+      setContratoToDelete(null);
+      loadData();
+    } else {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir contrato avulso",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filterByPeriod = (contrato: ContratoAvulso) => {
+    if (filtroPeriodo === 'todos') return true;
+    
+    const dataContrato = new Date(contrato.data);
+    const hoje = new Date();
+    
+    if (filtroPeriodo === 'dia') {
+      return dataContrato.toDateString() === hoje.toDateString();
+    }
+    
+    if (filtroPeriodo === 'semana') {
+      const inicioSemana = new Date(hoje);
+      inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+      const fimSemana = new Date(inicioSemana);
+      fimSemana.setDate(inicioSemana.getDate() + 6);
+      return dataContrato >= inicioSemana && dataContrato <= fimSemana;
+    }
+    
+    if (filtroPeriodo === 'mes') {
+      return dataContrato.getMonth() === hoje.getMonth() && 
+             dataContrato.getFullYear() === hoje.getFullYear();
+    }
+    
+    if (filtroPeriodo === 'mes-especifico' && mesSelecionado) {
+      const [ano, mes] = mesSelecionado.split('-');
+      return dataContrato.getMonth() === parseInt(mes) - 1 && 
+             dataContrato.getFullYear() === parseInt(ano);
+    }
+    
+    return true;
+  };
+
+  const contratosFiltrados = contratos.filter(filterByPeriod);
+  const contratosHoje = contratosFiltrados.filter(c => c.data === new Date().toISOString().split('T')[0]);
   const totalHoje = contratosHoje.reduce((acc, c) => acc + c.valor, 0);
-  const totalGeral = contratos.reduce((acc, c) => acc + c.valor, 0);
+  const totalGeral = contratosFiltrados.reduce((acc, c) => acc + c.valor, 0);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Carregando...</p></div>;
@@ -201,10 +273,34 @@ const ContratosAvulsos = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Contratos</CardTitle>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <CardTitle>Histórico de Contratos</CardTitle>
+            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+              <Select value={filtroPeriodo} onValueChange={setFiltroPeriodo}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Filtrar por período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Períodos</SelectItem>
+                  <SelectItem value="dia">Hoje</SelectItem>
+                  <SelectItem value="semana">Esta Semana</SelectItem>
+                  <SelectItem value="mes">Este Mês</SelectItem>
+                  <SelectItem value="mes-especifico">Mês Específico</SelectItem>
+                </SelectContent>
+              </Select>
+              {filtroPeriodo === 'mes-especifico' && (
+                <Input
+                  type="month"
+                  value={mesSelecionado}
+                  onChange={(e) => setMesSelecionado(e.target.value)}
+                  className="w-full md:w-[200px]"
+                />
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {contratos.length > 0 ? (
+          {contratosFiltrados.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -213,10 +309,11 @@ const ContratosAvulsos = () => {
                     <TableHead>Descrição</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Registrado Por</TableHead>
+                    {isAdmin && <TableHead className="text-right">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contratos.map((contrato) => (
+                  {contratosFiltrados.map((contrato) => (
                     <TableRow key={contrato.id}>
                       <TableCell className="font-medium">
                         {new Date(contrato.data).toLocaleDateString('pt-BR')}
@@ -226,16 +323,44 @@ const ContratosAvulsos = () => {
                         R$ {contrato.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>{contrato.registrado_por}</TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => setContratoToDelete(contrato.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-8">Nenhum contrato avulso registrado</p>
+            <p className="text-center text-muted-foreground py-8">Nenhum contrato avulso encontrado para o período selecionado</p>
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!contratoToDelete} onOpenChange={() => setContratoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este contrato avulso? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => contratoToDelete && handleDelete(contratoToDelete)}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -35,20 +35,18 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const showSidebar = !["/", "/login"].includes(location.pathname);
+  const isLoginPage = location.pathname === "/login";
 
-  if (!showSidebar) {
+  if (isLoginPage) {
     return (
       <Routes>
-        <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
-        <Route path="*" element={<NotFound />} />
       </Routes>
     );
   }
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex-1 overflow-auto">
@@ -59,6 +57,7 @@ const AppContent = () => {
           </div>
           <div className="p-6">
             <Routes>
+              <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/proprietarios" element={<ProtectedRoute><Proprietarios /></ProtectedRoute>} />
               <Route path="/proprietarios/novo" element={<ProtectedRoute><NovoProprietario /></ProtectedRoute>} />

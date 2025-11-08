@@ -34,6 +34,7 @@ declare global {
       getBoletos: () => Promise<any>;
       getBoletosByInquilino: (id: string) => Promise<any>;
       marcarBoletoPago: (data: any) => Promise<any>;
+      deleteBoleto: (data: any) => Promise<any>;
       
       // Documentos
       getDocumentosByOwner: (data: { ownerType: string; ownerId: string }) => Promise<any>;
@@ -45,6 +46,7 @@ declare global {
       // Contratos Avulsos
       getContratosAvulsos: () => Promise<any>;
       createContratoAvulso: (data: any) => Promise<any>;
+      deleteContratoAvulso: (data: any) => Promise<any>;
       
       // Dashboard
       getDashboardStats: () => Promise<any>;

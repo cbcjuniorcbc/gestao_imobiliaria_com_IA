@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBoletosByInquilino: (id) => ipcRenderer.invoke('boletos:getByInquilino', id),
   marcarBoletoPago: (data) => ipcRenderer.invoke('boletos:marcarPago', data),
   createBoleto: (data) => ipcRenderer.invoke('boletos:create', data),
+  deleteBoleto: (data) => ipcRenderer.invoke('boletos:delete', data),
   
   // Documentos
   getDocumentosByOwner: (data) => ipcRenderer.invoke('documentos:getByOwner', data),
@@ -53,6 +54,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Contratos Avulsos
   getContratosAvulsos: () => ipcRenderer.invoke('contratos_avulsos:getAll'),
   createContratoAvulso: (data) => ipcRenderer.invoke('contratos_avulsos:create', data),
+  deleteContratoAvulso: (data) => ipcRenderer.invoke('contratos_avulsos:delete', data),
   
   // Dashboard
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),

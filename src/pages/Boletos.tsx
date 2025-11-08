@@ -5,20 +5,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, CheckCircle2, Clock, AlertCircle, ArrowLeft } from "lucide-react";
+import { Search, CheckCircle2, Clock, AlertCircle, ArrowLeft, Trash2 } from "lucide-react";
 import { Boleto, Inquilino } from '@/types';
 import { mockBoletos, mockInquilinos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Boletos = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroSituacao, setFiltroSituacao] = useState<string>('todos');
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
+  const [mesSelecionado, setMesSelecionado] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [boletoToDelete, setBoletoToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -86,17 +99,76 @@ const Boletos = () => {
     }
   };
 
+  const handleDelete = async (boletoId: string) => {
+    if (!window.electronAPI || !user) return;
+
+    const result = await (window.electronAPI as any).deleteBoleto({
+      boletoId,
+      userId: user.id,
+      userName: user.username
+    });
+
+    if (result.success) {
+      toast({
+        title: "Sucesso",
+        description: "Boleto excluído com sucesso",
+      });
+      setBoletoToDelete(null);
+      loadData();
+    } else {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir boleto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filterByPeriod = (boleto: Boleto) => {
+    if (filtroPeriodo === 'todos') return true;
+    
+    const dataBoleto = new Date(boleto.data_vencimento);
+    const hoje = new Date();
+    
+    if (filtroPeriodo === 'dia') {
+      return dataBoleto.toDateString() === hoje.toDateString();
+    }
+    
+    if (filtroPeriodo === 'semana') {
+      const inicioSemana = new Date(hoje);
+      inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+      const fimSemana = new Date(inicioSemana);
+      fimSemana.setDate(inicioSemana.getDate() + 6);
+      return dataBoleto >= inicioSemana && dataBoleto <= fimSemana;
+    }
+    
+    if (filtroPeriodo === 'mes') {
+      return dataBoleto.getMonth() === hoje.getMonth() && 
+             dataBoleto.getFullYear() === hoje.getFullYear();
+    }
+    
+    if (filtroPeriodo === 'mes-especifico' && mesSelecionado) {
+      const [ano, mes] = mesSelecionado.split('-');
+      return dataBoleto.getMonth() === parseInt(mes) - 1 && 
+             dataBoleto.getFullYear() === parseInt(ano);
+    }
+    
+    return true;
+  };
+
   const boletosFiltrados = boletos.filter(boleto => {
     const nomeInquilino = getNomeInquilino(boleto.inquilino_id).toLowerCase();
     const matchSearch = nomeInquilino.includes(searchTerm.toLowerCase()) ||
                        boleto.acao.toLowerCase().includes(searchTerm.toLowerCase());
     
-    if (filtroSituacao === 'todos') return matchSearch;
+    const matchPeriod = filterByPeriod(boleto);
+    
+    if (filtroSituacao === 'todos') return matchSearch && matchPeriod;
     if (filtroSituacao === 'atrasado') {
       const diasInfo = calcularDias(boleto.data_vencimento, boleto.situacao);
-      return matchSearch && diasInfo?.tipo === 'atrasado';
+      return matchSearch && matchPeriod && diasInfo?.tipo === 'atrasado';
     }
-    return matchSearch && boleto.situacao.toLowerCase() === filtroSituacao.toLowerCase();
+    return matchSearch && matchPeriod && boleto.situacao.toLowerCase() === filtroSituacao.toLowerCase();
   });
 
   const totalEmAberto = boletosFiltrados
@@ -108,22 +180,13 @@ const Boletos = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
-      <header className="bg-card border-b shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => navigate('/')}>
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Boletos e Pagamentos</h1>
-              <p className="text-sm text-muted-foreground">Gestão e histórico de boletos</p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Boletos e Pagamentos</h1>
+        <p className="text-muted-foreground mt-1">Gestão e histórico de boletos</p>
+      </div>
 
-      <main className="container mx-auto px-4 py-8 space-y-6">
+      <main className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -173,27 +236,51 @@ const Boletos = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por inquilino ou ação..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por inquilino ou ação..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filtroSituacao} onValueChange={setFiltroSituacao}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Situação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="em aberto">Em Aberto</SelectItem>
+                  <SelectItem value="pago">Pago</SelectItem>
+                  <SelectItem value="atrasado">Atrasado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={filtroSituacao} onValueChange={setFiltroSituacao}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filtrar por situação" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="em aberto">Em Aberto</SelectItem>
-                <SelectItem value="pago">Pago</SelectItem>
-                <SelectItem value="atrasado">Atrasado</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col md:flex-row gap-4">
+              <Select value={filtroPeriodo} onValueChange={setFiltroPeriodo}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Filtrar por período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Períodos</SelectItem>
+                  <SelectItem value="dia">Hoje</SelectItem>
+                  <SelectItem value="semana">Esta Semana</SelectItem>
+                  <SelectItem value="mes">Este Mês</SelectItem>
+                  <SelectItem value="mes-especifico">Mês Específico</SelectItem>
+                </SelectContent>
+              </Select>
+              {filtroPeriodo === 'mes-especifico' && (
+                <Input
+                  type="month"
+                  value={mesSelecionado}
+                  onChange={(e) => setMesSelecionado(e.target.value)}
+                  className="w-full md:w-[200px]"
+                />
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -210,7 +297,7 @@ const Boletos = () => {
                     <TableHead>Dias</TableHead>
                     <TableHead>Forma Pagamento</TableHead>
                     <TableHead>Período</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,22 +335,33 @@ const Boletos = () => {
                             `${new Date(boleto.data_inicio).toLocaleDateString('pt-BR')} - ${new Date(boleto.data_termino).toLocaleDateString('pt-BR')}`
                           )}
                         </TableCell>
-                        <TableCell>
-                          {boleto.situacao === 'Em aberto' && (
-                            <Button 
-                              size="sm" 
-                              onClick={() => marcarComoPago(boleto.id)}
-                              className="gap-2"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              Pagar
-                            </Button>
-                          )}
-                          {boleto.situacao === 'Pago' && boleto.data_pagamento && (
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
-                            </span>
-                          )}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {boleto.situacao === 'Em aberto' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => marcarComoPago(boleto.id)}
+                                className="gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Pagar
+                              </Button>
+                            )}
+                            {boleto.situacao === 'Pago' && boleto.data_pagamento && (
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                            {isAdmin && (
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => setBoletoToDelete(boleto.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -277,6 +375,23 @@ const Boletos = () => {
         </CardContent>
       </Card>
       </main>
+
+      <AlertDialog open={!!boletoToDelete} onOpenChange={() => setBoletoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este boleto? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => boletoToDelete && handleDelete(boletoToDelete)}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
