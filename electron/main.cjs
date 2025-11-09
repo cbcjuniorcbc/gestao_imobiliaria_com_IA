@@ -184,14 +184,13 @@ function createWindow() {
   });
 
   // Carregar app
-  const distPath = path.join(__dirname, '../dist/index.html');
-  const isDevelopment = !fs.existsSync(distPath);
-  
-  if (isDevelopment) {
+  if (app.isPackaged) {
+    // Produção - carregar do dist empacotado
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  } else {
+    // Desenvolvimento - carregar do servidor Vite
     mainWindow.loadURL('http://localhost:8080');
     mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(distPath);
   }
 
   mainWindow.on('closed', () => {

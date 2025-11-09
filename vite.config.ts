@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "./", // Importante para Electron usar caminhos relativos
   server: {
     host: "::",
     port: 8080,
