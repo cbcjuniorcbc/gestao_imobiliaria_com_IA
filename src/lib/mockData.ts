@@ -47,6 +47,7 @@ export const mockImoveis: Imovel[] = [
   {
     id: '1',
     proprietario_id: '1',
+    codigo: '1234',
     endereco: 'Rua Aurora, 789 - Apt 45 - São Paulo/SP',
     rua: 'Rua Aurora',
     numero: '789',
@@ -63,6 +64,7 @@ export const mockImoveis: Imovel[] = [
   {
     id: '2',
     proprietario_id: '1',
+    codigo: '5678',
     endereco: 'Rua Consolação, 321 - São Paulo/SP',
     rua: 'Rua Consolação',
     numero: '321',
@@ -79,6 +81,7 @@ export const mockImoveis: Imovel[] = [
   {
     id: '3',
     proprietario_id: '2',
+    codigo: '9012',
     endereco: 'Av. Brasil, 1500 - Sala 12 - São Paulo/SP',
     rua: 'Av. Brasil',
     numero: '1500',

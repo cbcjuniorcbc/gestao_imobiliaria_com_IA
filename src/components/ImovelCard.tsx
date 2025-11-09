@@ -34,7 +34,10 @@ export const ImovelCard = ({ imovel, onDelete, isAdmin }: ImovelCardProps) => {
         <CardTitle className="text-lg flex items-start justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/imoveis/${imovel.id}`)}>
             <Building2 className="w-5 h-5" />
-            <span>{imovel.tipo}</span>
+            <div className="flex flex-col">
+              <span>{imovel.tipo}</span>
+              <span className="text-xs font-normal text-muted-foreground">Código: {imovel.codigo}</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>

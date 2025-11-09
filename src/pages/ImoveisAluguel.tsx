@@ -72,7 +72,8 @@ const ImoveisAluguel = () => {
     i.endereco.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.bairro?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.rua?.toLowerCase().includes(searchTerm.toLowerCase())
+    i.rua?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    i.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -96,7 +97,7 @@ const ImoveisAluguel = () => {
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por endereço, bairro, cidade ou rua..."
+              placeholder="Buscar por código, endereço, bairro, cidade ou rua..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"

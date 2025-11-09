@@ -23,6 +23,7 @@ export interface Proprietario {
 export interface Imovel {
   id: string;
   proprietario_id: string;
+  codigo: string;
   endereco: string;
   rua?: string;
   numero?: string;

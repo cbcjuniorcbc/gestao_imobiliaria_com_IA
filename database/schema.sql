@@ -44,6 +44,7 @@ CREATE INDEX idx_proprietarios_cpf_cnpj ON proprietarios(cpf_cnpj);
 CREATE TABLE IF NOT EXISTS imoveis (
   id TEXT PRIMARY KEY,
   proprietario_id TEXT NOT NULL,
+  codigo TEXT UNIQUE NOT NULL,
   endereco TEXT NOT NULL,
   rua TEXT,
   numero TEXT,
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS imoveis (
 );
 
 CREATE INDEX idx_imoveis_proprietario ON imoveis(proprietario_id);
+CREATE INDEX idx_imoveis_codigo ON imoveis(codigo);
 CREATE INDEX idx_imoveis_situacao ON imoveis(situacao);
 CREATE INDEX idx_imoveis_tipo ON imoveis(tipo);
 CREATE INDEX idx_imoveis_bairro ON imoveis(bairro);
