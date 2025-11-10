@@ -35,6 +35,7 @@ export interface Imovel {
   valor: number;
   publicado_internet?: number;
   situacao: 'Disponível' | 'Locado' | 'Vendido' | 'Manutenção';
+  fotos_paths?: string;
   observacoes?: string;
   criado_em: string;
 }
@@ -52,6 +53,8 @@ export interface Inquilino {
   renda_aproximada?: number;
   data_inicio: string;
   data_termino?: string;
+  dia_vencimento?: number;
+  status: 'Ativo' | 'Inativo';
   observacoes?: string;
   pasta_path: string;
   criado_em: string;
@@ -76,7 +79,8 @@ export interface Boleto {
   data_vencimento: string;
   data_inicio?: string;
   data_termino?: string;
-  situacao: 'Em aberto' | 'Pago';
+  situacao: 'À gerar' | 'Em aberto' | 'Pago';
+  data_geracao?: string;
   data_pagamento?: string;
   observacoes?: string;
   criado_em: string;

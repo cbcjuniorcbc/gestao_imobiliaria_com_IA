@@ -98,7 +98,10 @@ const ImovelDetalhes = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-start justify-between">
-            <span className="text-2xl">{imovel.tipo}</span>
+            <div className="flex flex-col">
+              <span className="text-2xl">{imovel.tipo}</span>
+              <span className="text-xs text-muted-foreground mt-1">Código: {imovel.codigo}</span>
+            </div>
             <div className="flex items-center gap-2">
               <span className={`text-sm px-3 py-1 rounded ${getSituacaoColor(imovel.situacao)}`}>
                 {imovel.situacao}

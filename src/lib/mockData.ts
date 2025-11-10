@@ -112,6 +112,8 @@ export const mockInquilinos: Inquilino[] = [
     renda_aproximada: 5000.00,
     data_inicio: '2024-03-01',
     data_termino: '2025-03-01',
+    dia_vencimento: 10,
+    status: 'Ativo',
     observacoes: 'Contrato de 12 meses',
     pasta_path: '/Proprietario_Joao_Silva/Inquilino_Carlos_Oliveira',
     criado_em: '2024-02-28T10:00:00Z'
@@ -128,6 +130,8 @@ export const mockInquilinos: Inquilino[] = [
     email: 'ana.costa@email.com',
     renda_aproximada: 7500.00,
     data_inicio: '2024-02-15',
+    dia_vencimento: 5,
+    status: 'Ativo',
     observacoes: '',
     pasta_path: '/Proprietario_Joao_Silva/Inquilino_Ana_Costa',
     criado_em: '2024-02-10T14:00:00Z'

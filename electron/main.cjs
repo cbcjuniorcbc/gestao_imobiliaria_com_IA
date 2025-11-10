@@ -513,14 +513,17 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
     const props = resultToArray(propPathResult);
     const pasta_path = `${props[0].pasta_path}/Inquilino_${inquilino.nome.replace(/\s+/g, '_')}`;
     
+    // Valor padrão para dia_vencimento se não fornecido
+    const dia_vencimento = inquilino.dia_vencimento || 10;
+    
     db.run(
       `INSERT INTO inquilinos (id, imovel_id, proprietario_id, nome, cpf, rg, cpf_cnpj, telefone, 
-       email, renda_aproximada, data_inicio, data_termino, observacoes, pasta_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       email, renda_aproximada, data_inicio, data_termino, dia_vencimento, status, observacoes, pasta_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, inquilino.imovel_id, proprietario_id, inquilino.nome, inquilino.cpf || '', 
        inquilino.rg || '', inquilino.cpf_cnpj, inquilino.telefone, inquilino.email, 
        inquilino.renda_aproximada, inquilino.data_inicio, inquilino.data_termino || '', 
-       inquilino.observacoes || '', pasta_path]
+       dia_vencimento, 'Ativo', inquilino.observacoes || '', pasta_path]
     );
     
     saveDatabase();
@@ -529,6 +532,11 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
     // Atualizar situação do imóvel para Locado
     db.run("UPDATE imoveis SET situacao = 'Locado' WHERE id = ?", [inquilino.imovel_id]);
     saveDatabase();
+    
+    // Gerar boletos automáticos se houver data_termino
+    if (inquilino.data_termino) {
+      await gerarBoletosAutomaticos(id, inquilino, dia_vencimento, event.sender.id);
+    }
     
     logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Cadastro', `Cadastrou inquilino: ${inquilino.nome}`);
     
@@ -540,14 +548,41 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
 
 ipcMain.handle('inquilinos:update', async (event, inquilino) => {
   try {
+    // Obter dia_vencimento antigo
+    const oldData = db.exec('SELECT dia_vencimento FROM inquilinos WHERE id = ?', [inquilino.id]);
+    const oldDiaVencimento = resultToArray(oldData)[0]?.dia_vencimento;
+    
     db.run(
       `UPDATE inquilinos SET nome = ?, cpf = ?, rg = ?, cpf_cnpj = ?, telefone = ?, email = ?,
-       renda_aproximada = ?, data_inicio = ?, data_termino = ?, observacoes = ?
+       renda_aproximada = ?, data_inicio = ?, data_termino = ?, dia_vencimento = ?, status = ?, observacoes = ?
        WHERE id = ?`,
       [inquilino.nome, inquilino.cpf || '', inquilino.rg || '', inquilino.cpf_cnpj, 
        inquilino.telefone, inquilino.email, inquilino.renda_aproximada, inquilino.data_inicio,
-       inquilino.data_termino || null, inquilino.observacoes || '', inquilino.id]
+       inquilino.data_termino || null, inquilino.dia_vencimento || 10, inquilino.status || 'Ativo',
+       inquilino.observacoes || '', inquilino.id]
     );
+    
+    // Se o dia_vencimento mudou, atualizar apenas boletos futuros
+    if (inquilino.dia_vencimento && oldDiaVencimento !== inquilino.dia_vencimento) {
+      const hoje = new Date();
+      const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+      const proximoMesStr = proximoMes.toISOString().split('T')[0];
+      
+      // Atualizar vencimentos dos boletos a partir do próximo mês
+      const boletosResult = db.exec(
+        `SELECT id, data_vencimento FROM boletos 
+         WHERE inquilino_id = ? AND data_vencimento >= ? AND situacao IN ('À gerar', 'Em aberto')`,
+        [inquilino.id, proximoMesStr]
+      );
+      
+      const boletos = resultToArray(boletosResult);
+      boletos.forEach(boleto => {
+        const dataVenc = new Date(boleto.data_vencimento);
+        const novaData = new Date(dataVenc.getFullYear(), dataVenc.getMonth(), inquilino.dia_vencimento);
+        db.run('UPDATE boletos SET data_vencimento = ? WHERE id = ?', 
+               [novaData.toISOString().split('T')[0], boleto.id]);
+      });
+    }
     
     saveDatabase();
     logAction(event.sender.id, inquilino.userId, inquilino.userName, 'Edição', `Editou inquilino: ${inquilino.nome}`);
@@ -558,20 +593,24 @@ ipcMain.handle('inquilinos:update', async (event, inquilino) => {
   }
 });
 
-ipcMain.handle('inquilinos:delete', async (event, { inquilinoId, userId, userName }) => {
+ipcMain.handle('inquilinos:delete', async (event, { id, userId, userName }) => {
   try {
-    const result = db.exec('SELECT nome, imovel_id FROM inquilinos WHERE id = ?', [inquilinoId]);
+    const result = db.exec('SELECT nome, imovel_id FROM inquilinos WHERE id = ?', [id]);
     const inquilinos = resultToArray(result);
     const nome = inquilinos[0]?.nome;
     const imovelId = inquilinos[0]?.imovel_id;
     
-    db.run('DELETE FROM inquilinos WHERE id = ?', [inquilinoId]);
+    // Deletar inquilino e seus boletos (CASCADE)
+    db.run('DELETE FROM inquilinos WHERE id = ?', [id]);
     
-    // Verificar se ainda há inquilinos no imóvel
-    const countResult = db.exec('SELECT COUNT(*) as count FROM inquilinos WHERE imovel_id = ?', [imovelId]);
+    // Verificar se ainda há inquilinos ativos no imóvel
+    const countResult = db.exec(
+      "SELECT COUNT(*) as count FROM inquilinos WHERE imovel_id = ? AND status = 'Ativo'", 
+      [imovelId]
+    );
     const count = resultToArray(countResult)[0]?.count || 0;
     
-    // Se não há mais inquilinos, marcar imóvel como disponível
+    // Se não há mais inquilinos ativos, marcar imóvel como disponível
     if (count === 0) {
       db.run("UPDATE imoveis SET situacao = 'Disponível' WHERE id = ?", [imovelId]);
     }
@@ -591,17 +630,84 @@ ipcMain.handle('boletos:create', async (event, boleto) => {
     
     db.run(
       `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 
-       data_inicio, data_termino, situacao, observacoes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       data_inicio, data_termino, situacao, data_geracao, observacoes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, boleto.inquilino_id, boleto.acao, boleto.valor_total, boleto.forma_pagamento, 
        boleto.data_vencimento, boleto.data_inicio || '', boleto.data_termino || '', 
-       'Em aberto', boleto.observacoes || '']
+       boleto.situacao || 'À gerar', boleto.data_geracao || null, boleto.observacoes || '']
     );
     
     saveDatabase();
     logAction(event.sender.id, boleto.user_id, boleto.user_name, 'Boleto', `Registrou boleto: ${boleto.acao} - R$ ${boleto.valor_total}`);
     
     return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Função para gerar boletos automaticamente
+async function gerarBoletosAutomaticos(inquilinoId, inquilino, diaVencimento, senderId) {
+  try {
+    const dataInicio = new Date(inquilino.data_inicio);
+    const dataTermino = new Date(inquilino.data_termino);
+    const valor = inquilino.valor_aluguel || 0;
+    
+    // Obter o imóvel para pegar o valor
+    const imovelResult = db.exec('SELECT valor FROM imoveis WHERE id = ?', [inquilino.imovel_id]);
+    const imovelData = resultToArray(imovelResult);
+    const valorAluguel = imovelData[0]?.valor || valor;
+    
+    // Gerar boleto para cada mês do contrato
+    let mesAtual = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
+    
+    while (mesAtual <= dataTermino) {
+      const vencimento = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), diaVencimento);
+      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+      
+      const boletoId = Date.now().toString() + '_' + mesAtual.getMonth();
+      
+      db.run(
+        `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 
+         data_inicio, data_termino, situacao, observacoes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [boletoId, inquilinoId, 'Aluguel', valorAluguel, 'Boleto', 
+         vencimento.toISOString().split('T')[0], inicioMes.toISOString().split('T')[0], 
+         fimMes.toISOString().split('T')[0], 'À gerar', 
+         `Boleto gerado automaticamente para ${mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`]
+      );
+      
+      // Avançar para o próximo mês
+      mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+    }
+    
+    saveDatabase();
+  } catch (error) {
+    console.error('Erro ao gerar boletos automáticos:', error);
+  }
+}
+
+// Marcar boleto como gerado
+ipcMain.handle('boletos:marcarGerado', async (event, { boletoId, dataGeracao, userId, userName }) => {
+  try {
+    const result = db.exec('SELECT * FROM boletos WHERE id = ?', [boletoId]);
+    const boletos = resultToArray(result);
+    const boleto = boletos[0];
+    
+    db.run(
+      `UPDATE boletos 
+       SET situacao = 'Em aberto', data_geracao = ?
+       WHERE id = ?`,
+      [dataGeracao, boletoId]
+    );
+    
+    saveDatabase();
+    
+    logAction(event.sender.id, userId, userName, 
+              'Boleto Gerado', `Marcou boleto como gerado: R$ ${boleto.valor_total.toFixed(2)}`);
+    
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -628,7 +734,7 @@ ipcMain.handle('boletos:getByInquilino', async (event, inquilinoId) => {
   }
 });
 
-ipcMain.handle('boletos:marcarPago', async (event, { boletoId, userId, userName }) => {
+ipcMain.handle('boletos:marcarPago', async (event, { boletoId, dataPagamento, userId, userName }) => {
   try {
     const result = db.exec('SELECT * FROM boletos WHERE id = ?', [boletoId]);
     const boletos = resultToArray(result);
@@ -636,9 +742,9 @@ ipcMain.handle('boletos:marcarPago', async (event, { boletoId, userId, userName 
     
     db.run(
       `UPDATE boletos 
-       SET situacao = 'Pago', data_pagamento = datetime('now', 'localtime')
+       SET situacao = 'Pago', data_pagamento = ?
        WHERE id = ?`,
-      [boletoId]
+      [dataPagamento, boletoId]
     );
     
     saveDatabase();
