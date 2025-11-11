@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Upload, FileText } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ const EditarInquilino = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [documentos, setDocumentos] = useState<File[]>([]);
   
   const [formData, setFormData] = useState({
     nome: "",
@@ -27,6 +29,8 @@ const EditarInquilino = () => {
     renda_aproximada: "",
     data_inicio: "",
     data_termino: "",
+    dia_vencimento: "10",
+    status: "Ativo" as const,
     observacoes: ""
   });
 
@@ -49,6 +53,8 @@ const EditarInquilino = () => {
           renda_aproximada: inq.renda_aproximada ? inq.renda_aproximada.toString() : "",
           data_inicio: inq.data_inicio?.split('T')[0] || "",
           data_termino: inq.data_termino?.split('T')[0] || "",
+          dia_vencimento: inq.dia_vencimento ? inq.dia_vencimento.toString() : "10",
+          status: inq.status || "Ativo",
           observacoes: inq.observacoes || ""
         });
       }
@@ -59,6 +65,17 @@ const EditarInquilino = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setDocumentos(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setDocumentos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,6 +99,22 @@ const EditarInquilino = () => {
         });
 
         if (result.success) {
+          // Upload dos novos documentos se houver
+          if (documentos.length > 0) {
+            for (const file of documentos) {
+              const fileData = await file.arrayBuffer();
+              await (window.electronAPI as any).uploadDocumento({
+                ownerType: 'inquilino',
+                ownerId: id,
+                file: {
+                  name: file.name,
+                  data: Array.from(new Uint8Array(fileData))
+                },
+                userId: user?.id
+              });
+            }
+          }
+
           toast.success("Inquilino atualizado com sucesso!");
           navigate(`/inquilinos/${id}`);
         } else {
@@ -198,7 +231,7 @@ const EditarInquilino = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="data_inicio">Data de Início *</Label>
                   <Input
@@ -220,6 +253,35 @@ const EditarInquilino = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dia_vencimento">Dia Vencimento *</Label>
+                  <Input
+                    id="dia_vencimento"
+                    name="dia_vencimento"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.dia_vencimento}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ativo">Ativo</SelectItem>
+                    <SelectItem value="Inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -231,6 +293,45 @@ const EditarInquilino = () => {
                   onChange={handleInputChange}
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Adicionar Documentos</Label>
+                <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Clique para selecionar novos documentos
+                    </p>
+                  </label>
+                </div>
+                {documentos.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {documentos.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-secondary/50 rounded">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          <span className="text-sm">{file.name}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4">

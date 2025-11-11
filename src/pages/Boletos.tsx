@@ -3,9 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, CheckCircle2, Clock, AlertCircle, ArrowLeft, Trash2 } from "lucide-react";
+import { Search, CheckCircle2, Clock, AlertCircle, ArrowLeft, Trash2, FileCheck } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Boleto, Inquilino } from '@/types';
 import { mockBoletos, mockInquilinos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +41,10 @@ const Boletos = () => {
   const [mesSelecionado, setMesSelecionado] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [boletoToDelete, setBoletoToDelete] = useState<string | null>(null);
+  const [boletoToMarkGerado, setBoletoToMarkGerado] = useState<string | null>(null);
+  const [boletoToMarkPago, setBoletoToMarkPago] = useState<string | null>(null);
+  const [dataGeracao, setDataGeracao] = useState('');
+  const [dataPagamento, setDataPagamento] = useState('');
 
   useEffect(() => {
     loadData();
@@ -56,11 +69,12 @@ const Boletos = () => {
     setLoading(false);
   };
 
-  const marcarComoPago = async (boletoId: string) => {
-    if (!window.electronAPI || !user) return;
+  const marcarComoPago = async () => {
+    if (!window.electronAPI || !user || !boletoToMarkPago || !dataPagamento) return;
 
     const result = await (window.electronAPI as any).marcarBoletoPago({
-      boletoId,
+      boletoId: boletoToMarkPago,
+      dataPagamento,
       userId: user.id,
       userName: user.username
     });
@@ -70,11 +84,40 @@ const Boletos = () => {
         title: "Sucesso",
         description: "Boleto marcado como pago",
       });
+      setBoletoToMarkPago(null);
+      setDataPagamento('');
       loadData();
     } else {
       toast({
         title: "Erro",
         description: "Falha ao marcar boleto como pago",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const marcarComoGerado = async () => {
+    if (!window.electronAPI || !user || !boletoToMarkGerado || !dataGeracao) return;
+
+    const result = await (window.electronAPI as any).marcarBoletoGerado({
+      boletoId: boletoToMarkGerado,
+      dataGeracao,
+      userId: user.id,
+      userName: user.username
+    });
+
+    if (result.success) {
+      toast({
+        title: "Sucesso",
+        description: "Boleto marcado como gerado",
+      });
+      setBoletoToMarkGerado(null);
+      setDataGeracao('');
+      loadData();
+    } else {
+      toast({
+        title: "Erro",
+        description: "Falha ao marcar boleto como gerado",
         variant: "destructive"
       });
     }
@@ -164,6 +207,7 @@ const Boletos = () => {
     const matchPeriod = filterByPeriod(boleto);
     
     if (filtroSituacao === 'todos') return matchSearch && matchPeriod;
+    if (filtroSituacao === 'a gerar') return matchSearch && matchPeriod && boleto.situacao === 'À gerar';
     if (filtroSituacao === 'atrasado') {
       const diasInfo = calcularDias(boleto.data_vencimento, boleto.situacao);
       return matchSearch && matchPeriod && diasInfo?.tipo === 'atrasado';
@@ -253,6 +297,7 @@ const Boletos = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="a gerar">À Gerar</SelectItem>
                   <SelectItem value="em aberto">Em Aberto</SelectItem>
                   <SelectItem value="pago">Pago</SelectItem>
                   <SelectItem value="atrasado">Atrasado</SelectItem>
@@ -313,7 +358,9 @@ const Boletos = () => {
                         <TableCell>{new Date(boleto.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs ${
-                            boleto.situacao === 'Pago' 
+                            boleto.situacao === 'À gerar'
+                              ? 'bg-gray-100 text-gray-800'
+                              : boleto.situacao === 'Pago' 
                               ? 'bg-green-100 text-green-800' 
                               : diasInfo?.tipo === 'atrasado'
                               ? 'bg-red-100 text-red-800'
@@ -337,10 +384,27 @@ const Boletos = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {boleto.situacao === 'À gerar' && (
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setBoletoToMarkGerado(boleto.id);
+                                  setDataGeracao(new Date().toISOString().split('T')[0]);
+                                }}
+                                className="gap-2"
+                              >
+                                <FileCheck className="w-4 h-4" />
+                                Boleto Gerado
+                              </Button>
+                            )}
                             {boleto.situacao === 'Em aberto' && (
                               <Button 
                                 size="sm" 
-                                onClick={() => marcarComoPago(boleto.id)}
+                                onClick={() => {
+                                  setBoletoToMarkPago(boleto.id);
+                                  setDataPagamento(new Date().toISOString().split('T')[0]);
+                                }}
                                 className="gap-2"
                               >
                                 <CheckCircle2 className="w-4 h-4" />
@@ -349,7 +413,12 @@ const Boletos = () => {
                             )}
                             {boleto.situacao === 'Pago' && boleto.data_pagamento && (
                               <span className="text-xs text-muted-foreground">
-                                {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
+                                Pago: {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                            {boleto.data_geracao && boleto.situacao !== 'À gerar' && (
+                              <span className="text-xs text-muted-foreground">
+                                Gerado: {new Date(boleto.data_geracao).toLocaleDateString('pt-BR')}
                               </span>
                             )}
                             {isAdmin && (
@@ -392,6 +461,74 @@ const Boletos = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!boletoToMarkGerado} onOpenChange={() => {
+        setBoletoToMarkGerado(null);
+        setDataGeracao('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Marcar Boleto como Gerado</DialogTitle>
+            <DialogDescription>
+              Selecione a data em que o boleto foi gerado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="data-geracao">Data de Geração</Label>
+            <Input
+              id="data-geracao"
+              type="date"
+              value={dataGeracao}
+              onChange={(e) => setDataGeracao(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setBoletoToMarkGerado(null);
+              setDataGeracao('');
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={marcarComoGerado} disabled={!dataGeracao}>
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!boletoToMarkPago} onOpenChange={() => {
+        setBoletoToMarkPago(null);
+        setDataPagamento('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Marcar Boleto como Pago</DialogTitle>
+            <DialogDescription>
+              Selecione a data em que o boleto foi pago.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="data-pagamento">Data de Pagamento</Label>
+            <Input
+              id="data-pagamento"
+              type="date"
+              value={dataPagamento}
+              onChange={(e) => setDataPagamento(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setBoletoToMarkPago(null);
+              setDataPagamento('');
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={marcarComoPago} disabled={!dataPagamento}>
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

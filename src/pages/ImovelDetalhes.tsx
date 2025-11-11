@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, User, Edit, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useNavigate, useParams } from "react-router-dom";
 import { Imovel, Inquilino, Proprietario } from '@/types';
 import { mockImoveis, mockInquilinos, mockProprietarios } from '@/lib/mockData';
@@ -16,6 +18,8 @@ const ImovelDetalhes = () => {
   const [proprietario, setProprietario] = useState<Proprietario | null>(null);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mostrarAtivos, setMostrarAtivos] = useState(true);
+  const [mostrarInativos, setMostrarInativos] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -229,25 +233,55 @@ const ImovelDetalhes = () => {
       </Card>
 
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <User className="h-6 w-6" />
-            Inquilinos ({inquilinos.length})
+            Inquilinos ({inquilinos.filter(i => (mostrarAtivos && i.status === 'Ativo') || (mostrarInativos && i.status === 'Inativo')).length})
           </h2>
-          <Button onClick={() => navigate(`/imoveis/${id}/inquilinos/novo`)}>
-            <User className="w-4 h-4 mr-2" />
-            Adicionar Inquilino
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="mostrar-ativos" 
+                  checked={mostrarAtivos}
+                  onCheckedChange={(checked) => setMostrarAtivos(checked as boolean)}
+                />
+                <Label htmlFor="mostrar-ativos" className="cursor-pointer text-sm">Ativos</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="mostrar-inativos" 
+                  checked={mostrarInativos}
+                  onCheckedChange={(checked) => setMostrarInativos(checked as boolean)}
+                />
+                <Label htmlFor="mostrar-inativos" className="cursor-pointer text-sm">Inativos</Label>
+              </div>
+            </div>
+            <Button onClick={() => navigate(`/imoveis/${id}/inquilinos/novo`)}>
+              <User className="w-4 h-4 mr-2" />
+              Adicionar Inquilino
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {inquilinos.map((inquilino) => (
+          {inquilinos.filter(i => (mostrarAtivos && i.status === 'Ativo') || (mostrarInativos && i.status === 'Inativo')).map((inquilino) => {
+            const getStatusColor = (status: string) => {
+              return status === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+            };
+
+            return (
             <Card 
               key={inquilino.id} 
               className="hover:shadow-lg transition-all"
             >
               <CardHeader>
                 <CardTitle className="text-lg flex items-start justify-between">
-                  <span className="cursor-pointer" onClick={() => navigate(`/inquilinos/${inquilino.id}`)}>{inquilino.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="cursor-pointer" onClick={() => navigate(`/inquilinos/${inquilino.id}`)}>{inquilino.nome}</span>
+                    <span className={`text-xs px-2 py-1 rounded ${getStatusColor(inquilino.status)}`}>
+                      {inquilino.status}
+                    </span>
+                  </div>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/inquilinos/${inquilino.id}/editar`); }}>
                       <Edit className="w-4 h-4" />
@@ -276,7 +310,10 @@ const ImovelDetalhes = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 cursor-pointer" onClick={() => navigate(`/inquilinos/${inquilino.id}`)}>
-                <div className="text-sm text-muted-foreground">{inquilino.cpf_cnpj}</div>
+                <div className="text-sm text-muted-foreground">CPF/CNPJ: {inquilino.cpf_cnpj}</div>
+                {inquilino.dia_vencimento && (
+                  <div className="text-sm text-muted-foreground">Vencimento: Dia {inquilino.dia_vencimento}</div>
+                )}
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="w-4 h-4 text-muted-foreground" />
                   <span>{inquilino.email}</span>
@@ -297,7 +334,8 @@ const ImovelDetalhes = () => {
                 )}
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </div>
 
         {inquilinos.length === 0 && (
