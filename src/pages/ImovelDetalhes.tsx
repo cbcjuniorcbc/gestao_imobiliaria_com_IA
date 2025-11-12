@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, User, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, User, Edit, Trash2, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,6 +20,8 @@ const ImovelDetalhes = () => {
   const [loading, setLoading] = useState(true);
   const [mostrarAtivos, setMostrarAtivos] = useState(true);
   const [mostrarInativos, setMostrarInativos] = useState(true);
+  const [fotos, setFotos] = useState<string[]>([]);
+  const [fotoFullscreen, setFotoFullscreen] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -30,6 +32,22 @@ const ImovelDetalhes = () => {
       const imovelResult = await (window.electronAPI as any).getImovelById(id);
       if (imovelResult.success && imovelResult.data) {
         setImovel(imovelResult.data);
+        
+        // Carregar fotos
+        if (imovelResult.data.fotos_paths) {
+          try {
+            const fotoPaths = JSON.parse(imovelResult.data.fotos_paths);
+            const fotosCarregadas = await Promise.all(
+              fotoPaths.map(async (path: string) => {
+                const fotoResult = await (window.electronAPI as any).getFotoImovel(path);
+                return fotoResult.success ? fotoResult.data : null;
+              })
+            );
+            setFotos(fotosCarregadas.filter(f => f !== null));
+          } catch (e) {
+            console.error('Erro ao carregar fotos:', e);
+          }
+        }
         
         const propResult = await (window.electronAPI as any).getProprietarios();
         if (propResult.success) {
@@ -229,6 +247,27 @@ const ImovelDetalhes = () => {
               <p className="mt-1">{imovel.observacoes}</p>
             </div>
           )}
+          
+          {fotos.length > 0 && (
+            <div className="pt-4 border-t">
+              <p className="text-sm text-muted-foreground mb-3">Fotos do Imóvel</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {fotos.map((foto, index) => (
+                  <div 
+                    key={index}
+                    className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setFotoFullscreen(foto)}
+                  >
+                    <img 
+                      src={foto} 
+                      alt={`Foto ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -344,6 +383,31 @@ const ImovelDetalhes = () => {
           </Card>
         )}
       </div>
+      
+      {/* Modal Fullscreen para Fotos */}
+      {fotoFullscreen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setFotoFullscreen(null)}
+        >
+          <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <img 
+              src={fotoFullscreen} 
+              alt="Foto em tela cheia"
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute top-4 right-4 bg-background/80 hover:bg-background"
+              onClick={() => setFotoFullscreen(null)}
+            >
+              ✕
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

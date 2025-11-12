@@ -120,6 +120,9 @@ async function initializeDatabase() {
     if (fs.existsSync(dbPath)) {
       const buffer = fs.readFileSync(dbPath);
       db = new SQL.Database(buffer);
+      
+      // Executar migrations para bancos existentes
+      runMigrations();
     } else {
       db = new SQL.Database();
       
@@ -148,6 +151,84 @@ async function initializeDatabase() {
     console.error('Erro ao conectar banco:', error);
     dialog.showErrorBox('Erro de Banco de Dados', `Não foi possível conectar ao banco:\n${error.message}`);
     app.quit();
+  }
+}
+
+// Executar migrations para atualizar banco existente
+function runMigrations() {
+  console.log('Verificando necessidade de migrations...');
+  
+  try {
+    // Verificar e adicionar coluna 'codigo' na tabela imoveis
+    const checkCodigoColumn = db.exec("PRAGMA table_info(imoveis)");
+    const columns = resultToArray(checkCodigoColumn);
+    const hasCodigoColumn = columns.some(col => col.name === 'codigo');
+    
+    if (!hasCodigoColumn) {
+      console.log('Adicionando coluna codigo na tabela imoveis...');
+      db.run('ALTER TABLE imoveis ADD COLUMN codigo TEXT');
+      
+      // Gerar códigos únicos para imóveis existentes
+      const imoveis = db.exec('SELECT id FROM imoveis');
+      if (imoveis.length > 0) {
+        const imoveisArray = resultToArray(imoveis);
+        imoveisArray.forEach(imovel => {
+          const codigo = Math.floor(1000 + Math.random() * 9000).toString();
+          db.run('UPDATE imoveis SET codigo = ? WHERE id = ?', [codigo, imovel.id]);
+        });
+      }
+      
+      saveDatabase();
+      console.log('Coluna codigo adicionada com sucesso!');
+    }
+    
+    // Verificar e adicionar coluna 'dia_vencimento' na tabela inquilinos
+    const checkDiaVencimentoColumn = db.exec("PRAGMA table_info(inquilinos)");
+    const inquilinosColumns = resultToArray(checkDiaVencimentoColumn);
+    const hasDiaVencimentoColumn = inquilinosColumns.some(col => col.name === 'dia_vencimento');
+    
+    if (!hasDiaVencimentoColumn) {
+      console.log('Adicionando coluna dia_vencimento na tabela inquilinos...');
+      db.run('ALTER TABLE inquilinos ADD COLUMN dia_vencimento INTEGER DEFAULT 10');
+      saveDatabase();
+      console.log('Coluna dia_vencimento adicionada com sucesso!');
+    }
+    
+    // Verificar e adicionar coluna 'status' na tabela inquilinos
+    const hasStatusColumn = inquilinosColumns.some(col => col.name === 'status');
+    
+    if (!hasStatusColumn) {
+      console.log('Adicionando coluna status na tabela inquilinos...');
+      db.run("ALTER TABLE inquilinos ADD COLUMN status TEXT DEFAULT 'Ativo'");
+      saveDatabase();
+      console.log('Coluna status adicionada com sucesso!');
+    }
+    
+    // Verificar e adicionar coluna 'data_geracao' na tabela boletos
+    const checkDataGeracaoColumn = db.exec("PRAGMA table_info(boletos)");
+    const boletosColumns = resultToArray(checkDataGeracaoColumn);
+    const hasDataGeracaoColumn = boletosColumns.some(col => col.name === 'data_geracao');
+    
+    if (!hasDataGeracaoColumn) {
+      console.log('Adicionando coluna data_geracao na tabela boletos...');
+      db.run('ALTER TABLE boletos ADD COLUMN data_geracao TEXT');
+      saveDatabase();
+      console.log('Coluna data_geracao adicionada com sucesso!');
+    }
+    
+    // Verificar e adicionar coluna 'fotos_paths' na tabela imoveis
+    const hasFotosPathsColumn = columns.some(col => col.name === 'fotos_paths');
+    
+    if (!hasFotosPathsColumn) {
+      console.log('Adicionando coluna fotos_paths na tabela imoveis...');
+      db.run('ALTER TABLE imoveis ADD COLUMN fotos_paths TEXT');
+      saveDatabase();
+      console.log('Coluna fotos_paths adicionada com sucesso!');
+    }
+    
+    console.log('Migrations concluídas!');
+  } catch (error) {
+    console.error('Erro ao executar migrations:', error);
   }
 }
 
@@ -1014,6 +1095,129 @@ ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, us
     saveDatabase();
     
     return { success: true, id, path: filePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Upload de fotos para imóveis
+ipcMain.handle('imoveis:uploadFotos', async (event, { imovelId, files }) => {
+  try {
+    // Obter dados do imóvel
+    const result = db.exec('SELECT fotos_paths, endereco FROM imoveis WHERE id = ?', [imovelId]);
+    const imoveis = resultToArray(result);
+    
+    if (imoveis.length === 0) {
+      return { success: false, error: 'Imóvel não encontrado' };
+    }
+    
+    const imovel = imoveis[0];
+    let fotosPaths = [];
+    
+    // Parse existing photos
+    if (imovel.fotos_paths) {
+      try {
+        fotosPaths = JSON.parse(imovel.fotos_paths);
+      } catch (e) {
+        fotosPaths = [];
+      }
+    }
+    
+    // Criar pasta para fotos do imóvel
+    const folderPath = `Imovel_${imovelId}_Fotos`;
+    const fullFolderPath = createFolder(folderPath);
+    
+    // Salvar cada foto
+    for (const file of files) {
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+      const filePath = path.join(fullFolderPath, fileName);
+      
+      fs.writeFileSync(filePath, Buffer.from(file.data));
+      
+      // Adicionar caminho relativo ao array
+      fotosPaths.push(path.join(folderPath, fileName));
+    }
+    
+    // Atualizar banco com novos caminhos
+    db.run(
+      'UPDATE imoveis SET fotos_paths = ? WHERE id = ?',
+      [JSON.stringify(fotosPaths), imovelId]
+    );
+    
+    saveDatabase();
+    
+    return { success: true, fotosPaths };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Obter foto do imóvel
+ipcMain.handle('imoveis:getFoto', async (event, { fotoPath }) => {
+  try {
+    const fullPath = path.join(rootPath, fotoPath);
+    
+    if (!fs.existsSync(fullPath)) {
+      return { success: false, error: 'Foto não encontrada' };
+    }
+    
+    const fileData = fs.readFileSync(fullPath);
+    const base64 = fileData.toString('base64');
+    const ext = path.extname(fotoPath).toLowerCase();
+    let mimeType = 'image/jpeg';
+    
+    if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.gif') mimeType = 'image/gif';
+    else if (ext === '.webp') mimeType = 'image/webp';
+    
+    return { 
+      success: true, 
+      data: `data:${mimeType};base64,${base64}`
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Deletar foto do imóvel
+ipcMain.handle('imoveis:deleteFoto', async (event, { imovelId, fotoPath }) => {
+  try {
+    // Obter fotos atuais
+    const result = db.exec('SELECT fotos_paths FROM imoveis WHERE id = ?', [imovelId]);
+    const imoveis = resultToArray(result);
+    
+    if (imoveis.length === 0) {
+      return { success: false, error: 'Imóvel não encontrado' };
+    }
+    
+    let fotosPaths = [];
+    if (imoveis[0].fotos_paths) {
+      try {
+        fotosPaths = JSON.parse(imoveis[0].fotos_paths);
+      } catch (e) {
+        fotosPaths = [];
+      }
+    }
+    
+    // Remover foto do array
+    fotosPaths = fotosPaths.filter(p => p !== fotoPath);
+    
+    // Deletar arquivo físico
+    const fullPath = path.join(rootPath, fotoPath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+    
+    // Atualizar banco
+    db.run(
+      'UPDATE imoveis SET fotos_paths = ? WHERE id = ?',
+      [JSON.stringify(fotosPaths), imovelId]
+    );
+    
+    saveDatabase();
+    
+    return { success: true, fotosPaths };
   } catch (error) {
     return { success: false, error: error.message };
   }

@@ -31,10 +31,18 @@ const NovoImovel = () => {
     situacao: "Disponível" as const,
     observacoes: ""
   });
+  
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +76,24 @@ const NovoImovel = () => {
         });
 
         if (result.success) {
+          // Upload de fotos se houver
+          if (selectedFiles.length > 0 && window.electronAPI && 'uploadFotosImovel' in window.electronAPI) {
+            const filesData = await Promise.all(
+              selectedFiles.map(async (file) => {
+                const arrayBuffer = await file.arrayBuffer();
+                return {
+                  name: file.name,
+                  data: Array.from(new Uint8Array(arrayBuffer))
+                };
+              })
+            );
+            
+            await (window.electronAPI as any).uploadFotosImovel({
+              imovelId: result.id,
+              files: filesData
+            });
+          }
+          
           toast.success("Imóvel cadastrado com sucesso!");
           navigate(`/proprietarios/${proprietarioId}`);
         } else {
@@ -246,6 +272,22 @@ const NovoImovel = () => {
                   onChange={handleInputChange}
                   rows={3}
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="fotos">Fotos do Imóvel</Label>
+                <Input
+                  id="fotos"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                />
+                {selectedFiles.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedFiles.length} foto(s) selecionada(s)
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4">

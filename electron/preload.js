@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Documentos
   uploadDocumento: (data) => ipcRenderer.invoke('documentos:upload', data),
   
+  // Fotos de Imóveis
+  uploadFotosImovel: (data) => ipcRenderer.invoke('imoveis:uploadFotos', data),
+  getFotoImovel: (fotoPath) => ipcRenderer.invoke('imoveis:getFoto', { fotoPath }),
+  deleteFotoImovel: (data) => ipcRenderer.invoke('imoveis:deleteFoto', data),
+  
   // Configurações
   selectRootPath: () => ipcRenderer.invoke('config:selectRootPath'),
   
