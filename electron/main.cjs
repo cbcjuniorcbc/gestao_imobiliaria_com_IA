@@ -226,6 +226,51 @@ function runMigrations() {
       console.log('Coluna fotos_paths adicionada com sucesso!');
     }
     
+    // Corrigir CHECK constraint da tabela boletos para aceitar 'À gerar'
+    console.log('Verificando constraint da tabela boletos...');
+    try {
+      // Tentar inserir um boleto temporário com situacao 'À gerar' para testar
+      const testId = 'test_' + Date.now();
+      try {
+        db.run(`INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, 
+                data_vencimento, situacao) VALUES (?, 'test', 'test', 0, 'test', '2025-01-01', 'À gerar')`, 
+               [testId]);
+        db.run('DELETE FROM boletos WHERE id = ?', [testId]);
+        console.log('Constraint boletos já está correta.');
+      } catch (constraintError) {
+        console.log('Corrigindo constraint da tabela boletos...');
+        
+        // Precisamos recriar a tabela com o constraint correto
+        db.run('ALTER TABLE boletos RENAME TO boletos_old');
+        
+        db.run(`CREATE TABLE boletos (
+          id TEXT PRIMARY KEY,
+          inquilino_id TEXT NOT NULL,
+          acao TEXT NOT NULL,
+          valor_total REAL NOT NULL,
+          forma_pagamento TEXT NOT NULL,
+          data_vencimento TEXT NOT NULL,
+          data_inicio TEXT,
+          data_termino TEXT,
+          situacao TEXT NOT NULL CHECK(situacao IN ('À gerar', 'Em aberto', 'Pago')),
+          data_geracao TEXT,
+          data_pagamento TEXT,
+          observacoes TEXT,
+          criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+          FOREIGN KEY (inquilino_id) REFERENCES inquilinos(id) ON DELETE CASCADE
+        )`);
+        
+        // Copiar dados da tabela antiga
+        db.run(`INSERT INTO boletos SELECT * FROM boletos_old`);
+        db.run('DROP TABLE boletos_old');
+        
+        saveDatabase();
+        console.log('Constraint da tabela boletos corrigida!');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar constraint:', error);
+    }
+    
     console.log('Migrations concluídas!');
   } catch (error) {
     console.error('Erro ao executar migrations:', error);
@@ -369,6 +414,29 @@ ipcMain.handle('usuarios:updatePassword', async (event, { userId, newPassword })
   } catch (error) {
     console.error('Erro ao alterar senha:', error);
     return { success: false, message: 'Erro ao alterar senha' };
+  }
+});
+
+// Usuários - Deletar
+ipcMain.handle('usuarios:delete', async (event, { userId }) => {
+  try {
+    // Verificar se o usuário existe
+    const userCheck = db.exec('SELECT id, username FROM usuarios WHERE id = ?', [userId]);
+    if (!userCheck || userCheck.length === 0 || userCheck[0].values.length === 0) {
+      return { success: false, message: 'Usuário não encontrado' };
+    }
+    
+    const usuario = resultToArray(userCheck)[0];
+    
+    // Deletar usuário
+    db.run('DELETE FROM usuarios WHERE id = ?', [userId]);
+    saveDatabase();
+    
+    console.log(`Usuário ${usuario.username} deletado com sucesso`);
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao deletar usuário:', error);
+    return { success: false, message: 'Erro ao deletar usuário' };
   }
 });
 
@@ -585,6 +653,12 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
   try {
     const id = Date.now().toString();
     
+    // Verificar se CPF já existe
+    const cpfCheck = db.exec('SELECT id FROM inquilinos WHERE cpf_cnpj = ?', [inquilino.cpf_cnpj]);
+    if (cpfCheck.length > 0 && cpfCheck[0].values.length > 0) {
+      return { success: false, error: 'Já existe um cliente com esse CPF' };
+    }
+    
     // Obter pasta do proprietário
     const propResult = db.exec('SELECT proprietario_id FROM imoveis WHERE id = ?', [inquilino.imovel_id]);
     const imoveis = resultToArray(propResult);
@@ -623,6 +697,10 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
     
     return { success: true, id };
   } catch (error) {
+    // Verificar se é erro de UNIQUE constraint
+    if (error.message && error.message.includes('UNIQUE constraint failed: inquilinos.cpf_cnpj')) {
+      return { success: false, error: 'Já existe um cliente com esse CPF' };
+    }
     return { success: false, error: error.message };
   }
 });

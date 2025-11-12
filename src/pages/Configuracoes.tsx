@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Users, Lock, Database } from 'lucide-react';
+import { Settings, Users, Lock, Database, Trash2 } from 'lucide-react';
 
 interface Usuario {
   id: string;
@@ -277,6 +277,39 @@ const Configuracoes = () => {
                           {usuario.role === 'admin' ? 'Administrador' : 'Recepção'}
                         </p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={async () => {
+                          if (usuario.id === user?.id) {
+                            toast({
+                              title: 'Erro',
+                              description: 'Você não pode deletar seu próprio usuário',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          
+                          if (window.confirm(`Tem certeza que deseja excluir o usuário ${usuario.username}?`)) {
+                            const result = await (window.electronAPI as any).deleteUsuario({ userId: usuario.id });
+                            if (result.success) {
+                              toast({
+                                title: 'Sucesso',
+                                description: 'Usuário excluído com sucesso!',
+                              });
+                              carregarUsuarios();
+                            } else {
+                              toast({
+                                title: 'Erro',
+                                description: result.message || 'Erro ao excluir usuário',
+                                variant: 'destructive',
+                              });
+                            }
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
                     </div>
                   ))}
                 </div>
