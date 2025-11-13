@@ -787,6 +787,10 @@ ipcMain.handle('boletos:create', async (event, boleto) => {
   try {
     const id = Date.now().toString();
     
+    // Verificar se é o primeiro boleto do inquilino
+    const existingBoletosResult = db.exec('SELECT COUNT(*) as count FROM boletos WHERE inquilino_id = ?', [boleto.inquilino_id]);
+    const existingCount = resultToArray(existingBoletosResult)[0]?.count || 0;
+    
     db.run(
       `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 
        data_inicio, data_termino, situacao, data_geracao, observacoes)
@@ -799,13 +803,68 @@ ipcMain.handle('boletos:create', async (event, boleto) => {
     saveDatabase();
     logAction(event.sender.id, boleto.user_id, boleto.user_name, 'Boleto', `Registrou boleto: ${boleto.acao} - R$ ${boleto.valor_total}`);
     
+    // Se é o primeiro boleto, gerar boletos automáticos para os próximos meses
+    if (existingCount === 0) {
+      const inquilinoResult = db.exec('SELECT * FROM inquilinos WHERE id = ?', [boleto.inquilino_id]);
+      const inquilinos = resultToArray(inquilinoResult);
+      const inquilino = inquilinos[0];
+      
+      if (inquilino && inquilino.data_termino) {
+        await gerarBoletosAutomaticosFromPrimeiroBoleto(
+          boleto.inquilino_id,
+          boleto.data_vencimento,
+          boleto.valor_total,
+          boleto.acao,
+          boleto.forma_pagamento,
+          inquilino.data_termino
+        );
+      }
+    }
+    
     return { success: true, id };
   } catch (error) {
     return { success: false, error: error.message };
   }
 });
 
-// Função para gerar boletos automaticamente
+// Função para gerar boletos automaticamente a partir do primeiro boleto
+async function gerarBoletosAutomaticosFromPrimeiroBoleto(inquilinoId, primeiraDataVencimento, valorTotal, acao, formaPagamento, dataTermino) {
+  try {
+    const primeiroVencimento = new Date(primeiraDataVencimento);
+    const diaVencimento = primeiroVencimento.getDate();
+    const dataFim = new Date(dataTermino);
+    
+    // Começar do mês seguinte ao primeiro boleto
+    let mesAtual = new Date(primeiroVencimento.getFullYear(), primeiroVencimento.getMonth() + 1, 1);
+    
+    while (mesAtual <= dataFim) {
+      const vencimento = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), diaVencimento);
+      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+      
+      const boletoId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
+      
+      db.run(
+        `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 
+         data_inicio, data_termino, situacao, observacoes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [boletoId, inquilinoId, acao, valorTotal, formaPagamento, 
+         vencimento.toISOString().split('T')[0], inicioMes.toISOString().split('T')[0], 
+         fimMes.toISOString().split('T')[0], 'À gerar', 
+         `Boleto gerado automaticamente para ${mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`]
+      );
+      
+      // Avançar para o próximo mês
+      mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+    }
+    
+    saveDatabase();
+  } catch (error) {
+    console.error('Erro ao gerar boletos automáticos:', error);
+  }
+}
+
+// Função para gerar boletos automaticamente quando cria inquilino
 async function gerarBoletosAutomaticos(inquilinoId, inquilino, diaVencimento, senderId) {
   try {
     const dataInicio = new Date(inquilino.data_inicio);
@@ -825,7 +884,7 @@ async function gerarBoletosAutomaticos(inquilinoId, inquilino, diaVencimento, se
       const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
       const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
       
-      const boletoId = Date.now().toString() + '_' + mesAtual.getMonth();
+      const boletoId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
       
       db.run(
         `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 

@@ -2,8 +2,18 @@ import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download, Edit, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download, Edit, Trash2, FileCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Inquilino, Boleto, Documento } from '@/types';
 import { mockInquilinos, mockBoletos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +28,10 @@ const InquilinoDetalhes = () => {
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [boletoToMarkGerado, setBoletoToMarkGerado] = useState<string | null>(null);
+  const [boletoToMarkPago, setBoletoToMarkPago] = useState<string | null>(null);
+  const [dataGeracao, setDataGeracao] = useState('');
+  const [dataPagamento, setDataPagamento] = useState('');
 
   useEffect(() => {
     loadData();
@@ -48,11 +62,12 @@ const InquilinoDetalhes = () => {
     setLoading(false);
   };
 
-  const marcarComoPago = async (boletoId: string) => {
-    if (!window.electronAPI?.marcarBoletoPago || !user) return;
+  const marcarComoPago = async () => {
+    if (!window.electronAPI || !user || !boletoToMarkPago || !dataPagamento) return;
 
-    const result = await window.electronAPI.marcarBoletoPago({
-      boletoId,
+    const result = await (window.electronAPI as any).marcarBoletoPago({
+      boletoId: boletoToMarkPago,
+      dataPagamento,
       userId: user.id,
       userName: user.username
     });
@@ -62,11 +77,40 @@ const InquilinoDetalhes = () => {
         title: "Sucesso",
         description: "Boleto marcado como pago",
       });
+      setBoletoToMarkPago(null);
+      setDataPagamento('');
       loadData();
     } else {
       toast({
         title: "Erro",
         description: "Falha ao marcar boleto como pago",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const marcarComoGerado = async () => {
+    if (!window.electronAPI || !user || !boletoToMarkGerado || !dataGeracao) return;
+
+    const result = await (window.electronAPI as any).marcarBoletoGerado({
+      boletoId: boletoToMarkGerado,
+      dataGeracao,
+      userId: user.id,
+      userName: user.username
+    });
+
+    if (result.success) {
+      toast({
+        title: "Sucesso",
+        description: "Boleto marcado como gerado",
+      });
+      setBoletoToMarkGerado(null);
+      setDataGeracao('');
+      loadData();
+    } else {
+      toast({
+        title: "Erro",
+        description: "Falha ao marcar boleto como gerado",
         variant: "destructive"
       });
     }
@@ -337,22 +381,40 @@ const InquilinoDetalhes = () => {
                         </TableCell>
                         <TableCell>{boleto.forma_pagamento}</TableCell>
                         <TableCell>
-                          {boleto.situacao === 'Em aberto' && (
-                            <Button 
-                              size="sm" 
-                              onClick={() => marcarComoPago(boleto.id)}
-                              className="gap-2"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              Marcar como Pago
-                            </Button>
-                          )}
-                          {boleto.situacao === 'Pago' && boleto.data_pagamento && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
-                            </span>
-                          )}
+                          <div className="flex gap-2">
+                            {boleto.situacao === 'À gerar' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setBoletoToMarkGerado(boleto.id)}
+                                className="gap-2"
+                              >
+                                <FileCheck className="w-4 h-4" />
+                                Boleto Gerado
+                              </Button>
+                            )}
+                            {boleto.situacao === 'Em aberto' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => setBoletoToMarkPago(boleto.id)}
+                                className="gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Pagar
+                              </Button>
+                            )}
+                            {boleto.data_geracao && (
+                              <span className="text-xs text-muted-foreground">
+                                Gerado: {new Date(boleto.data_geracao).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                            {boleto.situacao === 'Pago' && boleto.data_pagamento && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                Pago: {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -365,6 +427,74 @@ const InquilinoDetalhes = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!boletoToMarkGerado} onOpenChange={() => {
+        setBoletoToMarkGerado(null);
+        setDataGeracao('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Marcar Boleto como Gerado</DialogTitle>
+            <DialogDescription>
+              Selecione a data em que o boleto foi gerado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="data-geracao">Data de Geração</Label>
+            <Input
+              id="data-geracao"
+              type="date"
+              value={dataGeracao}
+              onChange={(e) => setDataGeracao(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setBoletoToMarkGerado(null);
+              setDataGeracao('');
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={marcarComoGerado} disabled={!dataGeracao}>
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!boletoToMarkPago} onOpenChange={() => {
+        setBoletoToMarkPago(null);
+        setDataPagamento('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Marcar Boleto como Pago</DialogTitle>
+            <DialogDescription>
+              Selecione a data em que o boleto foi pago.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="data-pagamento">Data de Pagamento</Label>
+            <Input
+              id="data-pagamento"
+              type="date"
+              value={dataPagamento}
+              onChange={(e) => setDataPagamento(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setBoletoToMarkPago(null);
+              setDataPagamento('');
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={marcarComoPago} disabled={!dataPagamento}>
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

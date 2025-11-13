@@ -388,10 +388,7 @@ const Boletos = () => {
                               <Button 
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  setBoletoToMarkGerado(boleto.id);
-                                  setDataGeracao(new Date().toISOString().split('T')[0]);
-                                }}
+                                onClick={() => setBoletoToMarkGerado(boleto.id)}
                                 className="gap-2"
                               >
                                 <FileCheck className="w-4 h-4" />
@@ -401,10 +398,7 @@ const Boletos = () => {
                             {boleto.situacao === 'Em aberto' && (
                               <Button 
                                 size="sm" 
-                                onClick={() => {
-                                  setBoletoToMarkPago(boleto.id);
-                                  setDataPagamento(new Date().toISOString().split('T')[0]);
-                                }}
+                                onClick={() => setBoletoToMarkPago(boleto.id)}
                                 className="gap-2"
                               >
                                 <CheckCircle2 className="w-4 h-4" />
