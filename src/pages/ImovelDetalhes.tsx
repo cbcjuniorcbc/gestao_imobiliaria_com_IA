@@ -34,18 +34,29 @@ const ImovelDetalhes = () => {
         setImovel(imovelResult.data);
         
         // Carregar fotos
-        if (imovelResult.data.fotos_paths) {
+        if (imovelResult.data.fotos_paths && imovelResult.data.fotos_paths !== '[]') {
           try {
             const fotoPaths = JSON.parse(imovelResult.data.fotos_paths);
-            const fotosCarregadas = await Promise.all(
-              fotoPaths.map(async (path: string) => {
-                const fotoResult = await (window.electronAPI as any).getFotoImovel(path);
-                return fotoResult.success ? fotoResult.data : null;
-              })
-            );
-            setFotos(fotosCarregadas.filter(f => f !== null));
+            if (fotoPaths && fotoPaths.length > 0) {
+              const fotosCarregadas = await Promise.all(
+                fotoPaths.map(async (path: string) => {
+                  try {
+                    const fotoResult = await (window.electronAPI as any).getFotoImovel(path);
+                    if (fotoResult.success && fotoResult.data) {
+                      return fotoResult.data;
+                    }
+                    return null;
+                  } catch (err) {
+                    console.error('Erro ao carregar foto individual:', err);
+                    return null;
+                  }
+                })
+              );
+              const fotosValidas = fotosCarregadas.filter(f => f !== null);
+              setFotos(fotosValidas);
+            }
           } catch (e) {
-            console.error('Erro ao carregar fotos:', e);
+            console.error('Erro ao processar fotos_paths:', e);
           }
         }
         
