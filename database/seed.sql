@@ -31,11 +31,11 @@ INSERT INTO proprietarios (id, nome, cpf_cnpj, telefone, email, endereco, metodo
 -- ============================================
 -- Imóveis
 -- ============================================
-INSERT INTO imoveis (id, proprietario_id, endereco, rua, numero, bairro, cidade, estado, cep, tipo, valor, publicado_internet, situacao, observacoes) VALUES
-('1', '1', 'Rua Aurora, 789 - Apt 45 - São Paulo/SP', 'Rua Aurora', '789', 'Centro', 'São Paulo', 'SP', '01000-000', 'Locação', 2500.00, 0, 'Locado', '2 quartos, 1 vaga'),
-('2', '1', 'Rua Consolação, 321 - São Paulo/SP', 'Rua Consolação', '321', 'Consolação', 'São Paulo', 'SP', '01300-000', 'Locação', 3800.00, 0, 'Locado', '3 quartos, 2 vagas'),
-('3', '2', 'Av. Brasil, 1500 - Sala 12 - São Paulo/SP', 'Av. Brasil', '1500', 'Centro', 'São Paulo', 'SP', '01430-000', 'Ponto Comercial', 4200.00, 0, 'Disponível', 'Sala comercial 60m²'),
-('4', '3', 'Rua Oscar Freire, 500 - Apt 101 - São Paulo/SP', 'Rua Oscar Freire', '500', 'Jardins', 'São Paulo', 'SP', '01422-000', 'Locação', 5500.00, 0, 'Locado', 'Alto padrão, 3 quartos');
+INSERT INTO imoveis (id, proprietario_id, codigo, endereco, rua, numero, bairro, cidade, estado, cep, tipo, valor, publicado_internet, situacao, observacoes) VALUES
+('1', '1', '1001', 'Rua Aurora, 789 - Apt 45 - São Paulo/SP', 'Rua Aurora', '789', 'Centro', 'São Paulo', 'SP', '01000-000', 'Locação', 2500.00, 0, 'Locado', '2 quartos, 1 vaga'),
+('2', '1', '1002', 'Rua Consolação, 321 - São Paulo/SP', 'Rua Consolação', '321', 'Consolação', 'São Paulo', 'SP', '01300-000', 'Locação', 3800.00, 0, 'Locado', '3 quartos, 2 vagas'),
+('3', '2', '1003', 'Av. Brasil, 1500 - Sala 12 - São Paulo/SP', 'Av. Brasil', '1500', 'Centro', 'São Paulo', 'SP', '01430-000', 'Ponto Comercial', 4200.00, 0, 'Disponível', 'Sala comercial 60m²'),
+('4', '3', '1004', 'Rua Oscar Freire, 500 - Apt 101 - São Paulo/SP', 'Rua Oscar Freire', '500', 'Jardins', 'São Paulo', 'SP', '01422-000', 'Locação', 5500.00, 0, 'Locado', 'Alto padrão, 3 quartos');
 
 -- ============================================
 -- Inquilinos
