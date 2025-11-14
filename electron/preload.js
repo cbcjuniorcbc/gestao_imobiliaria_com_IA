@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   marcarBoletoPago: (data) => ipcRenderer.invoke('boletos:marcarPago', data),
   marcarBoletoGerado: (data) => ipcRenderer.invoke('boletos:marcarGerado', data),
   deleteBoleto: (data) => ipcRenderer.invoke('boletos:delete', data),
+  criarBoletosInquilino: (data) => ipcRenderer.invoke('boletos:criarBoletosInquilino', data),
   
   // Documentos
   uploadDocumento: (data) => ipcRenderer.invoke('documentos:upload', data),

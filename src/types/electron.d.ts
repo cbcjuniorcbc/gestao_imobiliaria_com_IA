@@ -44,6 +44,9 @@ declare global {
       getBoletos: () => Promise<any>;
       getBoletosByInquilino: (id: string) => Promise<any>;
       marcarBoletoPago: (data: any) => Promise<any>;
+      marcarBoletoGerado: (data: any) => Promise<any>;
+      deleteBoleto: (data: any) => Promise<any>;
+      criarBoletosInquilino: (data: { inquilinoId: string; userId: string; userName: string }) => Promise<any>;
       createBoleto: (data: any) => Promise<any>;
       
       // Documentos
