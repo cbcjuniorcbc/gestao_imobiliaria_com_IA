@@ -116,6 +116,30 @@ const InquilinoDetalhes = () => {
     }
   };
 
+  const criarBoletosInquilino = async () => {
+    if (!window.electronAPI || !user || !id) return;
+
+    const result = await (window.electronAPI as any).criarBoletosInquilino({
+      inquilinoId: id,
+      userId: user.id,
+      userName: user.username
+    });
+
+    if (result.success) {
+      toast({
+        title: "Sucesso",
+        description: `${result.boletosGerados} boletos criados com sucesso!`,
+      });
+      loadData();
+    } else {
+      toast({
+        title: "Erro",
+        description: result.error || "Falha ao criar boletos",
+        variant: "destructive"
+      });
+    }
+  };
+
   const calcularDias = (dataVencimento: string, situacao: string) => {
     if (situacao === 'Pago') return null;
     
@@ -290,6 +314,10 @@ const InquilinoDetalhes = () => {
             <Button onClick={() => navigate(`/inquilinos/${id}/boleto/novo`)} className="flex-1">
               <FileText className="w-4 h-4 mr-2" />
               Registrar Boleto
+            </Button>
+            <Button onClick={criarBoletosInquilino} variant="outline" className="flex-1">
+              <FileCheck className="w-4 h-4 mr-2" />
+              Criar boletos Inquilino
             </Button>
           </div>
         </CardContent>

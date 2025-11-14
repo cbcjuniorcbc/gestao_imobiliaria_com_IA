@@ -977,6 +977,70 @@ ipcMain.handle('boletos:marcarPago', async (event, { boletoId, dataPagamento, us
   }
 });
 
+// Criar todos os boletos do inquilino de uma vez
+ipcMain.handle('boletos:criarBoletosInquilino', async (event, { inquilinoId, userId, userName }) => {
+  try {
+    // Buscar dados do inquilino
+    const inquilinoResult = db.exec('SELECT * FROM inquilinos WHERE id = ?', [inquilinoId]);
+    const inquilinos = resultToArray(inquilinoResult);
+    const inquilino = inquilinos[0];
+    
+    if (!inquilino) {
+      return { success: false, error: 'Inquilino não encontrado' };
+    }
+    
+    if (!inquilino.data_inicio || !inquilino.data_termino || !inquilino.dia_vencimento) {
+      return { success: false, error: 'Dados incompletos do inquilino. Verifique Data de Início, Data de Término e Dia de Vencimento.' };
+    }
+    
+    // Buscar o imóvel para pegar o valor
+    const imovelResult = db.exec('SELECT * FROM imoveis WHERE id = ?', [inquilino.imovel_id]);
+    const imoveis = resultToArray(imovelResult);
+    const imovel = imoveis[0];
+    const valorAluguel = inquilino.valor_aluguel || imovel?.valor || 0;
+    
+    const dataInicio = new Date(inquilino.data_inicio);
+    const dataTermino = new Date(inquilino.data_termino);
+    const diaVencimento = parseInt(inquilino.dia_vencimento);
+    
+    // Gerar boleto para cada mês entre data_inicio e data_termino
+    let mesAtual = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
+    const mesFim = new Date(dataTermino.getFullYear(), dataTermino.getMonth(), 1);
+    
+    let boletosGerados = 0;
+    
+    while (mesAtual <= mesFim) {
+      const vencimento = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), diaVencimento);
+      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+      
+      const boletoId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
+      
+      db.run(
+        `INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, data_vencimento, 
+         data_inicio, data_termino, situacao, observacoes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [boletoId, inquilinoId, 'Aluguel', valorAluguel, 'Boleto', 
+         vencimento.toISOString().split('T')[0], inicioMes.toISOString().split('T')[0], 
+         fimMes.toISOString().split('T')[0], 'À gerar', 
+         `Boleto para ${mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`]
+      );
+      
+      boletosGerados++;
+      
+      // Avançar para o próximo mês
+      mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+    }
+    
+    saveDatabase();
+    logAction(event.sender.id, userId, userName, 'Boleto', `Gerou ${boletosGerados} boletos para inquilino ${inquilino.nome}`);
+    
+    return { success: true, boletosGerados };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('boletos:delete', async (event, { boletoId, userId, userName }) => {
   try {
     const result = db.exec('SELECT * FROM boletos WHERE id = ?', [boletoId]);
