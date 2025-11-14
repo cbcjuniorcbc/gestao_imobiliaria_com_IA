@@ -36,13 +36,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBoletos: () => ipcRenderer.invoke('boletos:getAll'),
   getBoletosByInquilino: (id) => ipcRenderer.invoke('boletos:getByInquilino', id),
   marcarBoletoPago: (data) => ipcRenderer.invoke('boletos:marcarPago', data),
+  marcarBoletoGerado: (data) => ipcRenderer.invoke('boletos:marcarGerado', data),
   createBoleto: (data) => ipcRenderer.invoke('boletos:create', data),
   deleteBoleto: (data) => ipcRenderer.invoke('boletos:delete', data),
+  criarBoletosInquilino: (data) => ipcRenderer.invoke('boletos:criarBoletosInquilino', data),
   
   // Documentos
   getDocumentosByOwner: (data) => ipcRenderer.invoke('documentos:getByOwner', data),
   uploadDocumento: (data) => ipcRenderer.invoke('documentos:upload', data),
   downloadDocumento: (documentoId) => ipcRenderer.invoke('documentos:download', { documentoId }),
+  
+  // Fotos de Imóveis
+  uploadFotosImovel: (data) => ipcRenderer.invoke('imoveis:uploadFotos', data),
+  getFotoImovel: (fotoPath) => ipcRenderer.invoke('imoveis:getFoto', { fotoPath }),
+  deleteFotoImovel: (data) => ipcRenderer.invoke('imoveis:deleteFoto', data),
   
   // Logs
   getLogs: () => ipcRenderer.invoke('logs:getAll'),

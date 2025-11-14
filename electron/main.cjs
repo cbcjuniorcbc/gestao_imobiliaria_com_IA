@@ -725,7 +725,7 @@ ipcMain.handle('inquilinos:update', async (event, inquilino) => {
     if (inquilino.dia_vencimento && oldDiaVencimento !== inquilino.dia_vencimento) {
       const hoje = new Date();
       const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
-      const proximoMesStr = proximoMes.toISOString().split('T')[0];
+      const proximoMesStr = `${proximoMes.getFullYear()}-${String(proximoMes.getMonth() + 1).padStart(2, '0')}-01`;
       
       // Atualizar vencimentos dos boletos a partir do próximo mês
       const boletosResult = db.exec(
@@ -736,10 +736,12 @@ ipcMain.handle('inquilinos:update', async (event, inquilino) => {
       
       const boletos = resultToArray(boletosResult);
       boletos.forEach(boleto => {
-        const dataVenc = new Date(boleto.data_vencimento);
-        const novaData = new Date(dataVenc.getFullYear(), dataVenc.getMonth(), inquilino.dia_vencimento);
+        const dataVenc = new Date(boleto.data_vencimento + 'T00:00:00');
+        const ano = dataVenc.getFullYear();
+        const mes = dataVenc.getMonth();
+        const novaDataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(inquilino.dia_vencimento).padStart(2, '0')}`;
         db.run('UPDATE boletos SET data_vencimento = ? WHERE id = ?', 
-               [novaData.toISOString().split('T')[0], boleto.id]);
+               [novaDataStr, boleto.id]);
       });
     }
     
@@ -838,9 +840,14 @@ async function gerarBoletosAutomaticosFromPrimeiroBoleto(inquilinoId, primeiraDa
     let mesAtual = new Date(primeiroVencimento.getFullYear(), primeiroVencimento.getMonth() + 1, 1);
     
     while (mesAtual <= dataFim) {
-      const vencimento = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), diaVencimento);
-      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
-      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+      const ano = mesAtual.getFullYear();
+      const mes = mesAtual.getMonth();
+      
+      // Criar strings de data diretamente sem conversão de timezone
+      const vencimento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaVencimento).padStart(2, '0')}`;
+      const inicioMes = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+      const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+      const fimMes = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
       
       const boletoId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
       
@@ -849,8 +856,7 @@ async function gerarBoletosAutomaticosFromPrimeiroBoleto(inquilinoId, primeiraDa
          data_inicio, data_termino, situacao, observacoes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [boletoId, inquilinoId, acao, valorTotal, formaPagamento, 
-         vencimento.toISOString().split('T')[0], inicioMes.toISOString().split('T')[0], 
-         fimMes.toISOString().split('T')[0], 'À gerar', 
+         vencimento, inicioMes, fimMes, 'À gerar', 
          `Boleto gerado automaticamente para ${mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`]
       );
       
@@ -880,9 +886,14 @@ async function gerarBoletosAutomaticos(inquilinoId, inquilino, diaVencimento, se
     let mesAtual = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
     
     while (mesAtual <= dataTermino) {
-      const vencimento = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), diaVencimento);
-      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
-      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+      const ano = mesAtual.getFullYear();
+      const mes = mesAtual.getMonth();
+      
+      // Criar strings de data diretamente sem conversão de timezone
+      const vencimento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaVencimento).padStart(2, '0')}`;
+      const inicioMes = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+      const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+      const fimMes = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
       
       const boletoId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
       
@@ -891,8 +902,7 @@ async function gerarBoletosAutomaticos(inquilinoId, inquilino, diaVencimento, se
          data_inicio, data_termino, situacao, observacoes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [boletoId, inquilinoId, 'Aluguel', valorAluguel, 'Boleto', 
-         vencimento.toISOString().split('T')[0], inicioMes.toISOString().split('T')[0], 
-         fimMes.toISOString().split('T')[0], 'À gerar', 
+         vencimento, inicioMes, fimMes, 'À gerar', 
          `Boleto gerado automaticamente para ${mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`]
       );
       
@@ -1010,9 +1020,14 @@ ipcMain.handle('boletos:criarBoletosInquilino', async (event, { inquilinoId, use
     let boletosGerados = 0;
     
     while (mesAtual <= mesFim) {
-      const vencimento = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), diaVencimento);
-      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
-      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+      const ano = mesAtual.getFullYear();
+      const mes = mesAtual.getMonth();
+      
+      // Criar strings de data diretamente sem conversão de timezone
+      const vencimento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaVencimento).padStart(2, '0')}`;
+      const inicioMes = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+      const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+      const fimMes = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
       
       const boletoId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
       
@@ -1021,8 +1036,7 @@ ipcMain.handle('boletos:criarBoletosInquilino', async (event, { inquilinoId, use
          data_inicio, data_termino, situacao, observacoes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [boletoId, inquilinoId, 'Aluguel', valorAluguel, 'Boleto', 
-         vencimento.toISOString().split('T')[0], inicioMes.toISOString().split('T')[0], 
-         fimMes.toISOString().split('T')[0], 'À gerar', 
+         vencimento, inicioMes, fimMes, 'À gerar', 
          `Boleto para ${mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`]
       );
       
