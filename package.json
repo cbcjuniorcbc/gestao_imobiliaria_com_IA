@@ -1,7 +1,9 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "gestao-imobiliaria",
+  "description": "Sistema de gestão imobiliaria local desenvolvido com Electron, React, Vite e Tailwind CSS.",
+  "author": "Cleber Junior <cjunior@hotmail.com>",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
   "homepage": "./",
@@ -108,7 +110,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Gestão Imobiliária"
+      "shortcutName": "Gestão Imobiliária Beira Alta"
     },
     "files": [
       "dist/**/*",

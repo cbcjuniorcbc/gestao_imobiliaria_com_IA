@@ -56,6 +56,7 @@ const Login = () => {
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Sistema de Gestão Imobiliária</CardTitle>
+            <CardTitle className="text-2xl font-bold">Beira Alta Imóveis</CardTitle>
             <CardDescription className="mt-2">
               Entre com suas credenciais para acessar o sistema
             </CardDescription>
@@ -97,13 +98,6 @@ const Login = () => {
             </Button>
           </form>
           
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-xs text-muted-foreground mb-2 font-semibold">Primeiro acesso:</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p><strong>Usuário:</strong> admin (deixe a senha em branco)</p>
-              <p className="mt-2">Após o login, configure sua senha e crie outros usuários na área de Configurações.</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
