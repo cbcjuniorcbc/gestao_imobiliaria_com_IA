@@ -291,7 +291,7 @@ const InquilinoDetalhes = () => {
               <Calendar className="w-5 h-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Data de Início</p>
-                <p className="font-medium">{new Date(inquilino.data_inicio).toLocaleDateString('pt-BR')}</p>
+                <p className="font-medium">{new Date(inquilino.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
               </div>
             </div>
             {inquilino.data_termino && (
@@ -299,7 +299,7 @@ const InquilinoDetalhes = () => {
                 <Calendar className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Data de Término</p>
-                  <p className="font-medium">{new Date(inquilino.data_termino).toLocaleDateString('pt-BR')}</p>
+                  <p className="font-medium">{new Date(inquilino.data_termino + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                 </div>
               </div>
             )}
@@ -340,7 +340,7 @@ const InquilinoDetalhes = () => {
                     <div>
                       <span className="font-medium block">{doc.filename}</span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                        {new Date(doc.uploaded_at + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </span>
                     </div>
                   </div>
@@ -390,7 +390,7 @@ const InquilinoDetalhes = () => {
                         <TableCell className="text-green-600 font-semibold">
                           R$ {boleto.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell>{new Date(boleto.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>{new Date(boleto.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs ${
                             boleto.situacao === 'Pago' 
@@ -433,13 +433,13 @@ const InquilinoDetalhes = () => {
                             )}
                             {boleto.data_geracao && (
                               <span className="text-xs text-muted-foreground">
-                                Gerado: {new Date(boleto.data_geracao).toLocaleDateString('pt-BR')}
+                                Gerado: {new Date(boleto.data_geracao + 'T00:00:00').toLocaleDateString('pt-BR')}
                               </span>
                             )}
                             {boleto.situacao === 'Pago' && boleto.data_pagamento && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                Pago: {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
+                                Pago: {new Date(boleto.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR')}
                               </span>
                             )}
                           </div>

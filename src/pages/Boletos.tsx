@@ -355,7 +355,7 @@ const Boletos = () => {
                         <TableCell className="text-green-600 font-semibold">
                           R$ {boleto.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell>{new Date(boleto.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>{new Date(boleto.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs ${
                             boleto.situacao === 'À gerar'
@@ -379,7 +379,7 @@ const Boletos = () => {
                         <TableCell>{boleto.forma_pagamento}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {boleto.data_inicio && boleto.data_termino && (
-                            `${new Date(boleto.data_inicio).toLocaleDateString('pt-BR')} - ${new Date(boleto.data_termino).toLocaleDateString('pt-BR')}`
+                            `${new Date(boleto.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} - ${new Date(boleto.data_termino + 'T00:00:00').toLocaleDateString('pt-BR')}`
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -407,12 +407,12 @@ const Boletos = () => {
                             )}
                             {boleto.situacao === 'Pago' && boleto.data_pagamento && (
                               <span className="text-xs text-muted-foreground">
-                                Pago: {new Date(boleto.data_pagamento).toLocaleDateString('pt-BR')}
+                                Pago: {new Date(boleto.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR')}
                               </span>
                             )}
                             {boleto.data_geracao && boleto.situacao !== 'À gerar' && (
                               <span className="text-xs text-muted-foreground">
-                                Gerado: {new Date(boleto.data_geracao).toLocaleDateString('pt-BR')}
+                                Gerado: {new Date(boleto.data_geracao + 'T00:00:00').toLocaleDateString('pt-BR')}
                               </span>
                             )}
                             {isAdmin && (
