@@ -1100,11 +1100,11 @@ ipcMain.handle('documentos:download', async (event, { documentoId }) => {
     
     const doc = docs[0];
     
-    if (!doc.file_path) {
+    if (!doc.path) {
       return { success: false, error: 'Caminho do arquivo não encontrado' };
     }
     
-    const filePath = path.join(rootPath, doc.file_path);
+    const filePath = path.join(rootPath, doc.path);
     
     if (!fs.existsSync(filePath)) {
       return { success: false, error: 'Arquivo não encontrado no sistema: ' + filePath };
