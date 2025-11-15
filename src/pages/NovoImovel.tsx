@@ -32,16 +32,21 @@ const NovoImovel = () => {
     observacoes: ""
   });
   
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFotos, setSelectedFotos] = useState<File[]>([]);
+  const [selectedDocumentos, setSelectedDocumentos] = useState<File[]>([]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'foto' | 'documento') => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      if (fileType === 'foto') {
+        setSelectedFotos(Array.from(e.target.files));
+      } else {
+        setSelectedDocumentos(Array.from(e.target.files));
+      }
     }
   };
 
@@ -57,6 +62,26 @@ const NovoImovel = () => {
     
     try {
       if (window.electronAPI && 'createImovel' in window.electronAPI) {
+        const anexos = [];
+
+        for (const file of selectedFotos) {
+          const arrayBuffer = await file.arrayBuffer();
+          anexos.push({
+            name: file.name,
+            data: Array.from(new Uint8Array(arrayBuffer)),
+            type: 'foto'
+          });
+        }
+
+        for (const file of selectedDocumentos) {
+          const arrayBuffer = await file.arrayBuffer();
+          anexos.push({
+            name: file.name,
+            data: Array.from(new Uint8Array(arrayBuffer)),
+            type: 'documento'
+          });
+        }
+
         const result = await (window.electronAPI as any).createImovel({
           proprietario_id: proprietarioId,
           endereco: `${formData.rua}, ${formData.numero} - ${formData.bairro} - ${formData.cidade}/${formData.estado}`,
@@ -72,28 +97,11 @@ const NovoImovel = () => {
           situacao: formData.situacao,
           observacoes: formData.observacoes,
           user_id: user?.id,
-          user_name: user?.username
+          user_name: user?.username,
+          anexos: anexos
         });
 
         if (result.success) {
-          // Upload de fotos se houver
-          if (selectedFiles.length > 0 && window.electronAPI && 'uploadFotosImovel' in window.electronAPI) {
-            const filesData = await Promise.all(
-              selectedFiles.map(async (file) => {
-                const arrayBuffer = await file.arrayBuffer();
-                return {
-                  name: file.name,
-                  data: Array.from(new Uint8Array(arrayBuffer))
-                };
-              })
-            );
-            
-            await (window.electronAPI as any).uploadFotosImovel({
-              imovelId: result.id,
-              files: filesData
-            });
-          }
-          
           toast.success("Imóvel cadastrado com sucesso!");
           navigate(`/proprietarios/${proprietarioId}`);
         } else {
@@ -281,11 +289,26 @@ const NovoImovel = () => {
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={handleFileChange}
+                  onChange={(e) => handleFileChange(e, 'foto')}
                 />
-                {selectedFiles.length > 0 && (
+                {selectedFotos.length > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedFiles.length} foto(s) selecionada(s)
+                    {selectedFotos.length} foto(s) selecionada(s)
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="documentos">Documentos do Imóvel</Label>
+                <Input
+                  id="documentos"
+                  type="file"
+                  multiple
+                  onChange={(e) => handleFileChange(e, 'documento')}
+                />
+                {selectedDocumentos.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedDocumentos.length} documento(s) selecionado(s)
                   </p>
                 )}
               </div>

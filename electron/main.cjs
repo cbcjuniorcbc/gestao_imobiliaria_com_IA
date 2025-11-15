@@ -225,6 +225,27 @@ function runMigrations() {
       saveDatabase();
       console.log('Coluna fotos_paths adicionada com sucesso!');
     }
+
+    // Verificar e criar tabela imovel_anexos se não existir
+    const checkImovelAnexosTable = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='imovel_anexos'");
+    if (checkImovelAnexosTable.length === 0) {
+      console.log('Criando tabela imovel_anexos...');
+      db.run(`
+        CREATE TABLE imovel_anexos (
+          id TEXT PRIMARY KEY,
+          imovel_id TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          file_type TEXT NOT NULL CHECK(file_type IN ('foto', 'documento')),
+          created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+          FOREIGN KEY (imovel_id) REFERENCES imoveis(id) ON DELETE CASCADE
+        )
+      `);
+      db.run('CREATE INDEX idx_imovel_anexos_imovel_id ON imovel_anexos(imovel_id);');
+      db.run('CREATE INDEX idx_imovel_anexos_file_type ON imovel_anexos(file_type);');
+      saveDatabase();
+      console.log('Tabela imovel_anexos criada com sucesso!');
+    }
     
     // Corrigir CHECK constraint da tabela boletos para aceitar 'À gerar'
     console.log('Verificando constraint da tabela boletos...');
@@ -538,10 +559,25 @@ ipcMain.handle('imoveis:getByProprietario', async (event, proprietarioId) => {
 
 ipcMain.handle('imoveis:getById', async (event, id) => {
   try {
+    console.log(`[imoveis:getById] Attempting to fetch imovel with ID: ${id}`);
     const result = db.exec('SELECT * FROM imoveis WHERE id = ?', [id]);
+    console.log(`[imoveis:getById] Raw DB exec result for ID ${id}:`, JSON.stringify(result));
+
     const imoveis = resultToArray(result);
-    return { success: true, data: imoveis[0] || null };
+    let imovel = imoveis[0] || null; 
+    console.log(`[imoveis:getById] Processed imovel object for ID ${id}:`, JSON.stringify(imovel));
+
+    if (imovel) {
+      const anexosResult = db.exec('SELECT * FROM imovel_anexos WHERE imovel_id = ?', [id]);
+      imovel.anexos = resultToArray(anexosResult);
+      console.log(`[imoveis:getById] Imovel with anexos for ID ${id}:`, JSON.stringify(imovel));
+    } else {
+      console.log(`[imoveis:getById] No imovel found for ID: ${id}`);
+    }
+    
+    return { success: true, data: imovel };
   } catch (error) {
+    console.error(`[imoveis:getById] Error fetching imovel with ID ${id}:`, error); 
     return { success: false, error: error.message };
   }
 });
@@ -572,6 +608,13 @@ ipcMain.handle('imoveis:create', async (event, imovel) => {
        imovel.situacao, imovel.observacoes || '']
     );
     
+    // Lidar com anexos
+    if (imovel.anexos && imovel.anexos.length > 0) {
+      for (const anexo of imovel.anexos) {
+        await handleDocumentUpload(event, { ownerType: 'imovel', ownerId: id, file: anexo, userId: imovel.user_id });
+      }
+    }
+    
     saveDatabase();
     logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Cadastro', `Cadastrou imóvel: ${imovel.endereco} (Código: ${codigo})`);
     
@@ -591,6 +634,13 @@ ipcMain.handle('imoveis:update', async (event, imovel) => {
        imovel.cidade || '', imovel.estado || '', imovel.cep || '', imovel.tipo, imovel.valor,
        imovel.publicado_internet || 0, imovel.situacao, imovel.observacoes || '', imovel.id]
     );
+    
+    // Lidar com anexos
+    if (imovel.anexos && imovel.anexos.length > 0) {
+      for (const anexo of imovel.anexos) {
+        await handleDocumentUpload(event, { ownerType: 'imovel', ownerId: imovel.id, file: anexo, userId: imovel.user_id });
+      }
+    }
     
     saveDatabase();
     logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Edição', `Editou imóvel: ${imovel.endereco}`);
@@ -1126,6 +1176,36 @@ ipcMain.handle('documentos:download', async (event, { documentoId }) => {
   }
 });
 
+// Deletar documento
+ipcMain.handle('documentos:delete', async (event, { documentoId }) => {
+  try {
+    // Buscar documento para pegar o caminho
+    const result = db.exec('SELECT * FROM documentos WHERE id = ?', [documentoId]);
+    const docs = resultToArray(result);
+
+    if (docs.length === 0) {
+      return { success: false, error: 'Documento não encontrado no banco de dados.' };
+    }
+
+    const doc = docs[0];
+    const filePath = path.join(rootPath, doc.path);
+
+    // Deletar arquivo físico, se existir
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Deletar registro do banco
+    db.run('DELETE FROM documentos WHERE id = ?', [documentoId]);
+    saveDatabase();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao deletar documento:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Logs
 ipcMain.handle('logs:getAll', async () => {
   try {
@@ -1277,166 +1357,73 @@ ipcMain.handle('dashboard:getStats', async () => {
   }
 });
 
-// Upload de arquivo
-ipcMain.handle('documentos:upload', async (event, { ownerType, ownerId, file, userId }) => {
+// Função para lidar com o upload de documentos
+async function handleDocumentUpload(event, { ownerType, ownerId, file, userId }) {
   try {
-    // Obter pasta do proprietário/inquilino
     let folderPath;
+    let relativePath;
+
     if (ownerType === 'proprietario') {
       const result = db.exec('SELECT pasta_path FROM proprietarios WHERE id = ?', [ownerId]);
       const props = resultToArray(result);
-      folderPath = props[0].pasta_path;
-    } else {
+      if (!props[0] || !props[0].pasta_path) throw new Error('Pasta do proprietário não encontrada.');
+      relativePath = props[0].pasta_path;
+    } else if (ownerType === 'inquilino') {
       const result = db.exec('SELECT pasta_path FROM inquilinos WHERE id = ?', [ownerId]);
       const inqs = resultToArray(result);
-      folderPath = inqs[0].pasta_path;
+      if (!inqs[0] || !inqs[0].pasta_path) throw new Error('Pasta do inquilino não encontrada.');
+      relativePath = inqs[0].pasta_path;
+    } else if (ownerType === 'imovel') {
+      // Criar um caminho de pasta para o imóvel
+      relativePath = path.join('Imoveis', `Imovel_${ownerId}`);
+    } else {
+      throw new Error('Tipo de proprietário de documento inválido.');
     }
     
+    folderPath = path.join(rootPath, relativePath);
+
     // Criar pasta se não existir
-    const fullFolderPath = createFolder(folderPath);
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
     
     // Salvar arquivo
-    const filePath = path.join(fullFolderPath, file.name);
-    fs.writeFileSync(filePath, Buffer.from(file.data));
+    const finalFilePath = path.join(folderPath, file.name);
+    const finalRelativePath = path.join(relativePath, file.name);
+    fs.writeFileSync(finalFilePath, Buffer.from(file.data));
     
     // Registrar no banco
     const id = Date.now().toString();
-    db.run(
-      `INSERT INTO documentos (id, owner_type, owner_id, filename, path, uploaded_by)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, ownerType, ownerId, file.name, filePath, userId]
-    );
+
+    if (ownerType === 'imovel') {
+      db.run(
+        `INSERT INTO imovel_anexos (id, imovel_id, file_name, file_path, file_type)
+         VALUES (?, ?, ?, ?, ?)`,
+        [id, ownerId, file.name, finalRelativePath, file.type]
+      );
+    } else {
+      db.run(
+        `INSERT INTO documentos (id, owner_type, owner_id, filename, path, uploaded_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, ownerType, ownerId, file.name, finalRelativePath, userId]
+      );
+    }
     
     saveDatabase();
     
-    return { success: true, id, path: filePath };
+    return { success: true, id, path: finalRelativePath };
   } catch (error) {
+    console.error('Erro no upload de documento:', error);
     return { success: false, error: error.message };
   }
+}
+
+// Upload de arquivo
+ipcMain.handle('documentos:upload', async (event, data) => {
+  return handleDocumentUpload(event, data);
 });
 
-// Upload de fotos para imóveis
-ipcMain.handle('imoveis:uploadFotos', async (event, { imovelId, files }) => {
-  try {
-    // Obter dados do imóvel
-    const result = db.exec('SELECT fotos_paths, endereco FROM imoveis WHERE id = ?', [imovelId]);
-    const imoveis = resultToArray(result);
-    
-    if (imoveis.length === 0) {
-      return { success: false, error: 'Imóvel não encontrado' };
-    }
-    
-    const imovel = imoveis[0];
-    let fotosPaths = [];
-    
-    // Parse existing photos
-    if (imovel.fotos_paths) {
-      try {
-        fotosPaths = JSON.parse(imovel.fotos_paths);
-      } catch (e) {
-        fotosPaths = [];
-      }
-    }
-    
-    // Criar pasta para fotos do imóvel
-    const folderPath = `Imovel_${imovelId}_Fotos`;
-    const fullFolderPath = createFolder(folderPath);
-    
-    // Salvar cada foto
-    for (const file of files) {
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${file.name}`;
-      const filePath = path.join(fullFolderPath, fileName);
-      
-      fs.writeFileSync(filePath, Buffer.from(file.data));
-      
-      // Adicionar caminho relativo ao array
-      fotosPaths.push(path.join(folderPath, fileName));
-    }
-    
-    // Atualizar banco com novos caminhos
-    db.run(
-      'UPDATE imoveis SET fotos_paths = ? WHERE id = ?',
-      [JSON.stringify(fotosPaths), imovelId]
-    );
-    
-    saveDatabase();
-    
-    return { success: true, fotosPaths };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
 
-// Obter foto do imóvel
-ipcMain.handle('imoveis:getFoto', async (event, { fotoPath }) => {
-  try {
-    const fullPath = path.join(rootPath, fotoPath);
-    
-    if (!fs.existsSync(fullPath)) {
-      return { success: false, error: 'Foto não encontrada' };
-    }
-    
-    const fileData = fs.readFileSync(fullPath);
-    const base64 = fileData.toString('base64');
-    const ext = path.extname(fotoPath).toLowerCase();
-    let mimeType = 'image/jpeg';
-    
-    if (ext === '.png') mimeType = 'image/png';
-    else if (ext === '.gif') mimeType = 'image/gif';
-    else if (ext === '.webp') mimeType = 'image/webp';
-    
-    return { 
-      success: true, 
-      data: `data:${mimeType};base64,${base64}`
-    };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-// Deletar foto do imóvel
-ipcMain.handle('imoveis:deleteFoto', async (event, { imovelId, fotoPath }) => {
-  try {
-    // Obter fotos atuais
-    const result = db.exec('SELECT fotos_paths FROM imoveis WHERE id = ?', [imovelId]);
-    const imoveis = resultToArray(result);
-    
-    if (imoveis.length === 0) {
-      return { success: false, error: 'Imóvel não encontrado' };
-    }
-    
-    let fotosPaths = [];
-    if (imoveis[0].fotos_paths) {
-      try {
-        fotosPaths = JSON.parse(imoveis[0].fotos_paths);
-      } catch (e) {
-        fotosPaths = [];
-      }
-    }
-    
-    // Remover foto do array
-    fotosPaths = fotosPaths.filter(p => p !== fotoPath);
-    
-    // Deletar arquivo físico
-    const fullPath = path.join(rootPath, fotoPath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
-    
-    // Atualizar banco
-    db.run(
-      'UPDATE imoveis SET fotos_paths = ? WHERE id = ?',
-      [JSON.stringify(fotosPaths), imovelId]
-    );
-    
-    saveDatabase();
-    
-    return { success: true, fotosPaths };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
 
 // Função auxiliar de log
 function logAction(senderId, userId, userName, acaoTipo, descricao) {
@@ -1568,4 +1555,84 @@ app.on('before-quit', () => {
     db.close();
   }
   removeDatabaseLock();
+});
+
+// Handler para obter anexos de um imóvel
+ipcMain.handle('imoveis:getAnexos', async (event, imovelId) => {
+  try {
+    const result = db.exec('SELECT * FROM imovel_anexos WHERE imovel_id = ?', [imovelId]);
+    const anexos = resultToArray(result);
+    return { success: true, data: anexos };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para deletar um anexo de imóvel
+ipcMain.handle('imoveis:deleteAnexo', async (event, { anexoId }) => {
+  try {
+    // Buscar anexo para pegar o caminho
+    const result = db.exec('SELECT * FROM imovel_anexos WHERE id = ?', [anexoId]);
+    const anexos = resultToArray(result);
+
+    if (anexos.length === 0) {
+      return { success: false, error: 'Anexo não encontrado no banco de dados.' };
+    }
+
+    const anexo = anexos[0];
+    const filePath = path.join(rootPath, anexo.file_path);
+
+    // Deletar arquivo físico, se existir
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Deletar registro do banco
+    db.run('DELETE FROM imovel_anexos WHERE id = ?', [anexoId]);
+    saveDatabase();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao deletar anexo:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para download de anexo de imóvel
+ipcMain.handle('imoveis:downloadAnexo', async (event, anexoId) => {
+  try {
+    const result = db.exec('SELECT * FROM imovel_anexos WHERE id = ?', [anexoId]);
+    const anexos = resultToArray(result);
+    
+    if (anexos.length === 0) {
+      return { success: false, error: 'Anexo não encontrado' };
+    }
+    
+    const anexo = anexos[0];
+    
+    if (!anexo.file_path) {
+      return { success: false, error: 'Caminho do arquivo não encontrado para o anexo' };
+    }
+    
+    const filePath = path.join(rootPath, anexo.file_path);
+    
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'Arquivo não encontrado no sistema: ' + filePath };
+    }
+    
+    // Ler arquivo
+    const fileData = fs.readFileSync(filePath);
+    
+    // Retornar dados do arquivo
+    return { 
+      success: true, 
+      data: {
+        filename: anexo.file_name,
+        buffer: Array.from(fileData)
+      }
+    };
+  } catch (error) {
+    console.error('Erro ao baixar anexo do imóvel:', error);
+    return { success: false, error: error.message };
+  }
 });

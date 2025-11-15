@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, User, Edit, Trash2, X } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, User, Edit, Trash2, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useNavigate, useParams } from "react-router-dom";
 import { Imovel, Inquilino, Proprietario } from '@/types';
-import { mockImoveis, mockInquilinos, mockProprietarios } from '@/lib/mockData';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,71 +16,82 @@ const ImovelDetalhes = () => {
   const [imovel, setImovel] = useState<Imovel | null>(null);
   const [proprietario, setProprietario] = useState<Proprietario | null>(null);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
+  const [anexos, setAnexos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mostrarAtivos, setMostrarAtivos] = useState(true);
   const [mostrarInativos, setMostrarInativos] = useState(true);
-  const [fotos, setFotos] = useState<string[]>([]);
   const [fotoFullscreen, setFotoFullscreen] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("[ImovelDetalhes] useEffect triggered, ID:", id);
     loadData();
   }, [id]);
 
   const loadData = async () => {
+    console.log("[ImovelDetalhes] loadData called for ID:", id);
     if (window.electronAPI) {
+      console.log("[ImovelDetalhes] Calling getImovelById with ID:", id);
       const imovelResult = await (window.electronAPI as any).getImovelById(id);
+      console.log("[ImovelDetalhes] Result from getImovelById:", imovelResult);
       if (imovelResult.success && imovelResult.data) {
         setImovel(imovelResult.data);
-        
-        // Carregar fotos
-        if (imovelResult.data.fotos_paths && imovelResult.data.fotos_paths !== '[]') {
-          try {
-            const fotoPaths = JSON.parse(imovelResult.data.fotos_paths);
-            if (fotoPaths && fotoPaths.length > 0) {
-              const fotosCarregadas = await Promise.all(
-                fotoPaths.map(async (path: string) => {
-                  try {
-                    const fotoResult = await (window.electronAPI as any).getFotoImovel(path);
-                    if (fotoResult.success && fotoResult.data) {
-                      return fotoResult.data;
-                    }
-                    return null;
-                  } catch (err) {
-                    console.error('Erro ao carregar foto individual:', err);
-                    return null;
-                  }
-                })
-              );
-              const fotosValidas = fotosCarregadas.filter(f => f !== null);
-              setFotos(fotosValidas);
-            }
-          } catch (e) {
-            console.error('Erro ao processar fotos_paths:', e);
-          }
-        }
         
         const propResult = await (window.electronAPI as any).getProprietarios();
         if (propResult.success) {
           const prop = propResult.data.find((p: Proprietario) => p.id === imovelResult.data.proprietario_id);
           setProprietario(prop || null);
         }
-      }
 
-      const inquilinosResult = await (window.electronAPI as any).getInquilinosByImovel(id);
-      if (inquilinosResult.success) {
-        setInquilinos(inquilinosResult.data);
+        // Processar anexos que já vêm no objeto imovel
+        if (imovelResult.data.anexos && imovelResult.data.anexos.length > 0) {
+          const processedAnexos = await Promise.all(
+            imovelResult.data.anexos.map(async (anexo: any) => {
+              if (anexo.file_type === 'foto') {
+                const fotoResult = await (window.electronAPI as any).downloadImovelAnexo(anexo.id); // Use new handler
+                if (fotoResult.success) {
+                  const base64 = btoa(String.fromCharCode(...new Uint8Array(fotoResult.data.buffer)));
+                  let mimeType = 'application/octet-stream';
+                  if (fotoResult.data.filename.endsWith('.png')) {
+                    mimeType = 'image/png';
+                  } else if (fotoResult.data.filename.endsWith('.jpg') || fotoResult.data.filename.endsWith('.jpeg')) {
+                    mimeType = 'image/jpeg';
+                  }
+                  return { ...anexo, url: `data:${mimeType};base64,${base64}` };
+                }
+              }
+              return anexo;
+            })
+          );
+          setAnexos(processedAnexos);
+        } else {
+          setAnexos([]);
+        }
+      } else {
+        console.error("[ImovelDetalhes] Failed to load imovel or imovel data is null:", imovelResult.error);
       }
     } else {
-      // Fallback para mock
-      const imovelData = mockImoveis.find(i => i.id === id);
-      setImovel(imovelData || null);
-      if (imovelData) {
-        const propData = mockProprietarios.find(p => p.id === imovelData.proprietario_id);
-        setProprietario(propData || null);
-      }
-      setInquilinos(mockInquilinos.filter(i => i.imovel_id === id));
+      console.warn("[ImovelDetalhes] window.electronAPI is not available.");
     }
     setLoading(false);
+  };
+
+  const handleDownload = async (anexo: any) => {
+    if (window.electronAPI) {
+      const result = await (window.electronAPI as any).downloadImovelAnexo(anexo.id); // Use new handler
+      if (result.success) {
+        const blob = new Blob([new Uint8Array(result.data.buffer)]);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.data.filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      } else {
+        toast.error(result.error || 'Erro ao baixar anexo');
+      }
+    }
   };
 
   const getSituacaoColor = (situacao: string) => {
@@ -118,6 +128,9 @@ const ImovelDetalhes = () => {
       </div>
     );
   }
+
+  const fotos = anexos.filter(a => a.file_type === 'foto');
+  const documentos = anexos.filter(a => a.file_type === 'documento');
 
   return (
     <div className="space-y-6">
@@ -267,13 +280,29 @@ const ImovelDetalhes = () => {
                   <div 
                     key={index}
                     className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => setFotoFullscreen(foto)}
+                    onClick={() => setFotoFullscreen(foto.url)}
                   >
                     <img 
-                      src={foto} 
+                      src={foto.url} 
                       alt={`Foto ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {documentos.length > 0 && (
+            <div className="pt-4 border-t">
+              <p className="text-sm text-muted-foreground mb-3">Documentos do Imóvel</p>
+              <div className="space-y-2">
+                {documentos.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-2 border rounded-md">
+                    <span className="truncate">{doc.file_name}</span>
+                    <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}>
+                      <Download className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </div>

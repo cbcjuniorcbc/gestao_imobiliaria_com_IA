@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -33,7 +33,9 @@ const EditarImovel = () => {
     observacoes: ""
   });
   
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [anexos, setAnexos] = useState<any[]>([]);
+  const [selectedFotos, setSelectedFotos] = useState<File[]>([]);
+  const [selectedDocumentos, setSelectedDocumentos] = useState<File[]>([]);
 
   useEffect(() => {
     loadImovel();
@@ -57,6 +59,7 @@ const EditarImovel = () => {
           situacao: imovel.situacao,
           observacoes: imovel.observacoes || ""
         });
+        setAnexos(imovel.anexos || []); // Initialize anexos from imovel data
       }
     }
     setLoadingData(false);
@@ -67,9 +70,25 @@ const EditarImovel = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'foto' | 'documento') => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      if (fileType === 'foto') {
+        setSelectedFotos(Array.from(e.target.files));
+      } else {
+        setSelectedDocumentos(Array.from(e.target.files));
+      }
+    }
+  };
+
+  const handleDeleteAnexo = async (anexoId: string) => {
+    if (window.electronAPI) {
+      const result = await (window.electronAPI as any).deleteImovelAnexo(anexoId);
+      if (result.success) {
+        toast.success("Anexo removido com sucesso!");
+        setAnexos(prevAnexos => prevAnexos.filter(anexo => anexo.id !== anexoId)); // Update state directly
+      } else {
+        toast.error(result.error || "Erro ao remover anexo");
+      }
     }
   };
 
@@ -85,6 +104,26 @@ const EditarImovel = () => {
     
     try {
       if (window.electronAPI) {
+        const anexosToUpload = [];
+
+        for (const file of selectedFotos) {
+          const arrayBuffer = await file.arrayBuffer();
+          anexosToUpload.push({
+            name: file.name,
+            data: Array.from(new Uint8Array(arrayBuffer)),
+            type: 'foto'
+          });
+        }
+
+        for (const file of selectedDocumentos) {
+          const arrayBuffer = await file.arrayBuffer();
+          anexosToUpload.push({
+            name: file.name,
+            data: Array.from(new Uint8Array(arrayBuffer)),
+            type: 'documento'
+          });
+        }
+
         const result = await (window.electronAPI as any).updateImovel({
           id,
           endereco: `${formData.rua}, ${formData.numero} - ${formData.bairro} - ${formData.cidade}/${formData.estado}`,
@@ -100,28 +139,11 @@ const EditarImovel = () => {
           situacao: formData.situacao,
           observacoes: formData.observacoes,
           user_id: user?.id,
-          user_name: user?.username
+          user_name: user?.username,
+          anexos: anexosToUpload
         });
 
         if (result.success) {
-          // Upload de novas fotos se houver
-          if (selectedFiles.length > 0 && window.electronAPI && 'uploadFotosImovel' in window.electronAPI) {
-            const filesData = await Promise.all(
-              selectedFiles.map(async (file) => {
-                const arrayBuffer = await file.arrayBuffer();
-                return {
-                  name: file.name,
-                  data: Array.from(new Uint8Array(arrayBuffer))
-                };
-              })
-            );
-            
-            await (window.electronAPI as any).uploadFotosImovel({
-              imovelId: id,
-              files: filesData
-            });
-          }
-          
           toast.success("Imóvel atualizado com sucesso!");
           navigate(`/imoveis/${id}`);
         } else {
@@ -309,17 +331,49 @@ const EditarImovel = () => {
               </div>
               
               <div className="space-y-2">
+                <Label>Anexos Atuais</Label>
+                <div className="space-y-2">
+                  {anexos.map((anexo) => (
+                    <div key={anexo.id} className="flex items-center justify-between p-2 border rounded-md">
+                      <span className="truncate">{anexo.file_name}</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteAnexo(anexo.id)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                  {anexos.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Nenhum anexo encontrado.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="fotos">Adicionar Novas Fotos</Label>
                 <Input
                   id="fotos"
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={handleFileChange}
+                  onChange={(e) => handleFileChange(e, 'foto')}
                 />
-                {selectedFiles.length > 0 && (
+                {selectedFotos.length > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedFiles.length} foto(s) selecionada(s)
+                    {selectedFotos.length} foto(s) selecionada(s)
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="documentos">Adicionar Novos Documentos</Label>
+                <Input
+                  id="documentos"
+                  type="file"
+                  multiple
+                  onChange={(e) => handleFileChange(e, 'documento')}
+                />
+                {selectedDocumentos.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedDocumentos.length} documento(s) selecionado(s)
                   </p>
                 )}
               </div>
@@ -328,7 +382,7 @@ const EditarImovel = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate(`/imoveis/${id}`)}
                   className="flex-1"
                 >
                   Cancelar

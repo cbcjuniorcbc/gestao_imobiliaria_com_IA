@@ -179,6 +179,23 @@ const InquilinoDetalhes = () => {
     }
   };
 
+  const handleDeleteDocument = async (documentoId: string, filename: string) => {
+    if (!window.electronAPI || !window.confirm(`Tem certeza que deseja deletar o documento "${filename}"?`)) return;
+
+    try {
+      const result = await (window.electronAPI as any).deleteDocumento(documentoId);
+      if (result.success) {
+        sonnerToast.success(`Documento "${filename}" deletado com sucesso!`);
+        loadData(); // Reload documents after deletion
+      } else {
+        sonnerToast.error(result.error || 'Erro ao deletar documento');
+      }
+    } catch (error) {
+      console.error('Erro ao deletar documento:', error);
+      sonnerToast.error('Erro ao deletar documento');
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Carregando...</p></div>;
   }
@@ -340,121 +357,35 @@ const InquilinoDetalhes = () => {
                     <div>
                       <span className="font-medium block">{doc.filename}</span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(doc.uploaded_at + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
                       </span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadDocument(doc.id, doc.filename)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadDocument(doc.id, doc.filename)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteDocument(doc.id, doc.filename)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Histórico de Pagamentos ({boletos.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {boletos.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ação</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Dias</TableHead>
-                    <TableHead>Forma Pagamento</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {boletos.map((boleto) => {
-                    const diasInfo = calcularDias(boleto.data_vencimento, boleto.situacao);
-                    return (
-                      <TableRow key={boleto.id}>
-                        <TableCell className="font-medium">{boleto.acao}</TableCell>
-                        <TableCell className="text-green-600 font-semibold">
-                          R$ {boleto.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell>{new Date(boleto.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            boleto.situacao === 'Pago' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {boleto.situacao}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {diasInfo && (
-                            <span className={`text-sm ${diasInfo.tipo === 'atrasado' ? 'text-red-600 font-semibold' : 'text-blue-600'}`}>
-                              {diasInfo.tipo === 'atrasado' ? `${diasInfo.dias} dias atrasado` : `${diasInfo.dias} dias`}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>{boleto.forma_pagamento}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            {boleto.situacao === 'À gerar' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => setBoletoToMarkGerado(boleto.id)}
-                                className="gap-2"
-                              >
-                                <FileCheck className="w-4 h-4" />
-                                Boleto Gerado
-                              </Button>
-                            )}
-                            {boleto.situacao === 'Em aberto' && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => setBoletoToMarkPago(boleto.id)}
-                                className="gap-2"
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Pagar
-                              </Button>
-                            )}
-                            {boleto.data_geracao && (
-                              <span className="text-xs text-muted-foreground">
-                                Gerado: {new Date(boleto.data_geracao + 'T00:00:00').toLocaleDateString('pt-BR')}
-                              </span>
-                            )}
-                            {boleto.situacao === 'Pago' && boleto.data_pagamento && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Pago: {new Date(boleto.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR')}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">Nenhum boleto registrado</p>
-          )}
-        </CardContent>
-      </Card>
 
       <Dialog open={!!boletoToMarkGerado} onOpenChange={() => {
         setBoletoToMarkGerado(null);
@@ -528,3 +459,21 @@ const InquilinoDetalhes = () => {
 };
 
 export default InquilinoDetalhes;
+
+const handleDeleteDocument = async (documentoId: string, filename: string) => {
+  if (!window.electronAPI || !window.confirm(`Tem certeza que deseja deletar o documento "${filename}"?`)) return;
+
+  try {
+    const result = await (window.electronAPI as any).deleteDocumento(documentoId);
+    if (result.success) {
+      sonnerToast.success(`Documento "${filename}" deletado com sucesso!`);
+      // Reload documents after deletion
+      loadData(); // Assuming loadData is accessible here, or pass it as a prop/callback
+    } else {
+      sonnerToast.error(result.error || 'Erro ao deletar documento');
+    }
+  } catch (error) {
+    console.error('Erro ao deletar documento:', error);
+    sonnerToast.error('Erro ao deletar documento');
+  }
+};

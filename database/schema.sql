@@ -56,7 +56,6 @@ CREATE TABLE IF NOT EXISTS imoveis (
   valor REAL NOT NULL,
   publicado_internet INTEGER DEFAULT 0,
   situacao TEXT NOT NULL CHECK(situacao IN ('Disponível', 'Locado', 'Vendido', 'Manutenção')),
-  fotos_paths TEXT,
   observacoes TEXT,
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
   FOREIGN KEY (proprietario_id) REFERENCES proprietarios(id) ON DELETE CASCADE
@@ -69,6 +68,22 @@ CREATE INDEX idx_imoveis_tipo ON imoveis(tipo);
 CREATE INDEX idx_imoveis_bairro ON imoveis(bairro);
 CREATE INDEX idx_imoveis_cidade ON imoveis(cidade);
 CREATE INDEX idx_imoveis_estado ON imoveis(estado);
+
+-- ============================================
+-- Tabela: imovel_anexos
+-- ============================================
+CREATE TABLE IF NOT EXISTS imovel_anexos (
+  id TEXT PRIMARY KEY,
+  imovel_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_type TEXT NOT NULL CHECK(file_type IN ('foto', 'documento')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  FOREIGN KEY (imovel_id) REFERENCES imoveis(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_imovel_anexos_imovel_id ON imovel_anexos(imovel_id);
+CREATE INDEX idx_imovel_anexos_file_type ON imovel_anexos(file_type);
 
 -- ============================================
 -- Tabela: inquilinos
@@ -104,7 +119,7 @@ CREATE INDEX idx_inquilinos_nome ON inquilinos(nome);
 -- ============================================
 CREATE TABLE IF NOT EXISTS documentos (
   id TEXT PRIMARY KEY,
-  owner_type TEXT NOT NULL CHECK(owner_type IN ('proprietario', 'inquilino')),
+  owner_type TEXT NOT NULL CHECK(owner_type IN ('proprietario', 'inquilino', 'imovel')),
   owner_id TEXT NOT NULL,
   filename TEXT NOT NULL,
   path TEXT NOT NULL,

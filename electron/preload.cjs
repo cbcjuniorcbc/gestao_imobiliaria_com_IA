@@ -23,7 +23,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createImovel: (data) => ipcRenderer.invoke('imoveis:create', data),
   updateImovel: (data) => ipcRenderer.invoke('imoveis:update', data),
   deleteImovel: (data) => ipcRenderer.invoke('imoveis:delete', data),
-  
+  getImovelAnexos: (imovelId) => ipcRenderer.invoke('imoveis:getAnexos', imovelId),
+  deleteImovelAnexo: (anexoId) => ipcRenderer.invoke('imoveis:deleteAnexo', { anexoId }),
+  downloadImovelAnexo: (anexoId) => ipcRenderer.invoke('imoveis:downloadAnexo', anexoId),
+
   // Inquilinos
   getInquilinos: () => ipcRenderer.invoke('inquilinos:getAll'),
   getInquilinosByImovel: (id) => ipcRenderer.invoke('inquilinos:getByImovel', id),
@@ -45,11 +48,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDocumentosByOwner: (data) => ipcRenderer.invoke('documentos:getByOwner', data),
   uploadDocumento: (data) => ipcRenderer.invoke('documentos:upload', data),
   downloadDocumento: (documentoId) => ipcRenderer.invoke('documentos:download', { documentoId }),
-  
-  // Fotos de Imóveis
-  uploadFotosImovel: (data) => ipcRenderer.invoke('imoveis:uploadFotos', data),
-  getFotoImovel: (fotoPath) => ipcRenderer.invoke('imoveis:getFoto', { fotoPath }),
-  deleteFotoImovel: (data) => ipcRenderer.invoke('imoveis:deleteFoto', data),
+  deleteDocumento: (documentoId) => ipcRenderer.invoke('documentos:delete', { documentoId }),
   
   // Logs
   getLogs: () => ipcRenderer.invoke('logs:getAll'),

@@ -20,6 +20,16 @@ export interface Proprietario {
   criado_em: string;
 }
 
+export interface ImovelAnexo {
+  id: string;
+  imovel_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: 'foto' | 'documento';
+  created_at: string;
+  url?: string; // Adicionado para o frontend
+}
+
 export interface Imovel {
   id: string;
   proprietario_id: string;
@@ -35,7 +45,7 @@ export interface Imovel {
   valor: number;
   publicado_internet?: number;
   situacao: 'Disponível' | 'Locado' | 'Vendido' | 'Manutenção';
-  fotos_paths?: string;
+  anexos?: ImovelAnexo[]; // Updated to use ImovelAnexo
   observacoes?: string;
   criado_em: string;
 }
@@ -60,9 +70,14 @@ export interface Inquilino {
   criado_em: string;
 }
 
+export interface Foto {
+  path: string;
+  base64?: string;
+}
+
 export interface Documento {
   id: string;
-  owner_type: 'proprietario' | 'inquilino';
+  owner_type: 'proprietario' | 'inquilino' | 'imovel';
   owner_id: string;
   filename: string;
   path: string;
