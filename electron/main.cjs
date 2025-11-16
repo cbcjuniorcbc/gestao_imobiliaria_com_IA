@@ -124,6 +124,7 @@ async function initializeDatabase() {
       
       // Executar migrations para bancos existentes
       runMigrations();
+      db.exec('PRAGMA foreign_keys = ON;'); // Ensure foreign keys are ON after migrations
     } else {
       db = new SQL.Database();
       
@@ -141,7 +142,7 @@ async function initializeDatabase() {
       for (const stmt of statements) {
         try {
           db.run(stmt + ';'); // Add semicolon back for execution
-          console.log(`[Schema Init] Executed: ${stmt.substring(0, 100)}...`);
+          // console.log(`[Schema Init] Executed: ${stmt.substring(0, 100)}...`); // Too verbose, disable for now
         } catch (stmtError) {
           console.error(`[Schema Init] Error executing statement: ${stmt.substring(0, 100)}...`, stmtError);
           throw stmtError; // Re-throw to stop initialization
@@ -150,6 +151,16 @@ async function initializeDatabase() {
       
       // Re-enable foreign key checks after schema creation
       db.exec('PRAGMA foreign_keys = ON;'); 
+      
+      // Log foreign key status after enabling
+      const fkStatus = db.exec('PRAGMA foreign_keys;');
+      console.log('[DB Init] PRAGMA foreign_keys status after schema creation:', resultToArray(fkStatus));
+
+      // Log foreign key info for relevant tables
+      logForeignKeyInfo('imoveis');
+      logForeignKeyInfo('inquilinos');
+      logForeignKeyInfo('boletos');
+      logForeignKeyInfo('imovel_anexos');
       
       // Executar seed data
       const seedSQL = fs.readFileSync(
@@ -172,9 +183,25 @@ async function initializeDatabase() {
   }
 }
 
+// Função para logar informações de chaves estrangeiras
+function logForeignKeyInfo(tableName) {
+  try {
+    const fkInfo = db.exec(`PRAGMA foreign_key_list(${tableName});`);
+    const fks = resultToArray(fkInfo);
+    if (fks.length > 0) {
+      console.log(`[DB Init] Foreign keys for table '${tableName}':`, JSON.stringify(fks, null, 2));
+    } else {
+      console.log(`[DB Init] No foreign keys found for table '${tableName}'.`);
+    }
+  } catch (error) {
+    console.error(`[DB Init] Error logging foreign key info for table '${tableName}':`, error);
+  }
+}
+
 // Executar migrations para atualizar banco existente
 function runMigrations() {
   console.log('Verificando necessidade de migrations...');
+  db.exec('PRAGMA foreign_keys = ON;'); // Ensure foreign keys are ON during migrations
   
   try {
     // Verificar e adicionar coluna 'codigo' na tabela imoveis
@@ -263,51 +290,6 @@ function runMigrations() {
       db.run('CREATE INDEX idx_imovel_anexos_file_type ON imovel_anexos(file_type);');
       saveDatabase();
       console.log('Tabela imovel_anexos criada com sucesso!');
-    }
-    
-    // Corrigir CHECK constraint da tabela boletos para aceitar 'À gerar'
-    console.log('Verificando constraint da tabela boletos...');
-    try {
-      // Tentar inserir um boleto temporário com situacao 'À gerar' para testar
-      const testId = 'test_' + Date.now();
-      try {
-        db.run(`INSERT INTO boletos (id, inquilino_id, acao, valor_total, forma_pagamento, 
-                data_vencimento, situacao) VALUES (?, 'test', 'test', 0, 'test', '2025-01-01', 'À gerar')`, 
-               [testId]);
-        db.run('DELETE FROM boletos WHERE id = ?', [testId]);
-        console.log('Constraint boletos já está correta.');
-      } catch (constraintError) {
-        console.log('Corrigindo constraint da tabela boletos...');
-        
-        // Precisamos recriar a tabela com o constraint correto
-        db.run('ALTER TABLE boletos RENAME TO boletos_old');
-        
-        db.run(`CREATE TABLE boletos (
-          id TEXT PRIMARY KEY,
-          inquilino_id TEXT NOT NULL,
-          acao TEXT NOT NULL,
-          valor_total REAL NOT NULL,
-          forma_pagamento TEXT NOT NULL,
-          data_vencimento TEXT NOT NULL,
-          data_inicio TEXT,
-          data_termino TEXT,
-          situacao TEXT NOT NULL CHECK(situacao IN ('À gerar', 'Em aberto', 'Pago')),
-          data_geracao TEXT,
-          data_pagamento TEXT,
-          observacoes TEXT,
-          criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-          FOREIGN KEY (inquilino_id) REFERENCES inquilinos(id) ON DELETE CASCADE
-        )`);
-        
-        // Copiar dados da tabela antiga
-        db.run(`INSERT INTO boletos SELECT * FROM boletos_old`);
-        db.run('DROP TABLE boletos_old');
-        
-        saveDatabase();
-        console.log('Constraint da tabela boletos corrigida!');
-      }
-    } catch (error) {
-      console.error('Erro ao verificar constraint:', error);
     }
     
     console.log('Migrations concluídas!');
@@ -459,22 +441,29 @@ ipcMain.handle('usuarios:updatePassword', async (event, { userId, newPassword })
 // Usuários - Deletar
 ipcMain.handle('usuarios:delete', async (event, { userId }) => {
   try {
+    db.exec('PRAGMA foreign_keys = ON;'); // Ensure foreign keys are ON for this operation
+    console.log(`[usuarios:delete] Attempting to delete user with ID: ${userId}`);
+
     // Verificar se o usuário existe
     const userCheck = db.exec('SELECT id, username FROM usuarios WHERE id = ?', [userId]);
     if (!userCheck || userCheck.length === 0 || userCheck[0].values.length === 0) {
+      console.warn(`[usuarios:delete] User with ID ${userId} not found.`);
       return { success: false, message: 'Usuário não encontrado' };
     }
     
     const usuario = resultToArray(userCheck)[0];
     
     // Deletar usuário
+    console.log(`[usuarios:delete] Deleting user ${usuario.username} (ID: ${userId}).`);
     db.run('DELETE FROM usuarios WHERE id = ?', [userId]);
+    console.log(`[usuarios:delete] DELETE command executed for user ID: ${userId}.`);
     saveDatabase();
+    console.log(`[usuarios:delete] Database saved after deleting user ID: ${userId}.`);
     
     console.log(`Usuário ${usuario.username} deletado com sucesso`);
     return { success: true };
   } catch (error) {
-    console.error('Erro ao deletar usuário:', error);
+    console.error(`[usuarios:delete] Error deleting user with ID ${userId}:`, error);
     return { success: false, message: 'Erro ao deletar usuário' };
   }
 });
@@ -490,8 +479,29 @@ ipcMain.handle('proprietarios:getAll', async () => {
   }
 });
 
+ipcMain.handle('proprietarios:getById', async (event, id) => {
+  try {
+    // Fetch proprietario details
+    const propResult = db.exec('SELECT * FROM proprietarios WHERE id = ?', [id]);
+    const proprietarios = resultToArray(propResult);
+    const proprietario = proprietarios[0] || null;
+
+    if (proprietario) {
+      // Fetch associated documents
+      const docResult = db.exec("SELECT * FROM documentos WHERE owner_type = 'proprietario' AND owner_id = ?", [id]);
+      proprietario.documentos = resultToArray(docResult);
+    }
+
+    return { success: true, data: proprietario };
+  } catch (error) {
+    console.error(`[proprietarios:getById] Error fetching proprietario with ID ${id}:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('proprietarios:create', async (event, proprietario) => {
   try {
+    db.exec('PRAGMA foreign_keys = ON;'); // Ensure foreign keys are ON for this operation
     const id = Date.now().toString();
     const pasta_path = `/Proprietario_${proprietario.nome.replace(/\s+/g, '_')}`;
     
@@ -503,6 +513,13 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
        proprietario.observacoes || '', pasta_path]
     );
     
+    // Lidar com anexos
+    if (proprietario.anexos && proprietario.anexos.length > 0) {
+      for (const anexo of proprietario.anexos) {
+        await handleDocumentUpload(event, { ownerType: 'proprietario', ownerId: id, file: anexo, userId: proprietario.user_id });
+      }
+    }
+
     saveDatabase();
     
     // Criar pasta física
@@ -520,6 +537,7 @@ ipcMain.handle('proprietarios:create', async (event, proprietario) => {
 
 ipcMain.handle('proprietarios:update', async (event, proprietario) => {
   try {
+    db.exec('PRAGMA foreign_keys = ON;'); // Ensure foreign keys are ON for this operation
     db.run(
       `UPDATE proprietarios SET nome = ?, cpf_cnpj = ?, telefone = ?, email = ?, 
        endereco = ?, metodo_recebimento = ?, observacoes = ?
@@ -528,6 +546,13 @@ ipcMain.handle('proprietarios:update', async (event, proprietario) => {
        proprietario.endereco, proprietario.metodo_recebimento || '', proprietario.observacoes || '', proprietario.id]
     );
     
+    // Lidar com anexos
+    if (proprietario.anexos && proprietario.anexos.length > 0) {
+      for (const anexo of proprietario.anexos) {
+        await handleDocumentUpload(event, { ownerType: 'proprietario', ownerId: proprietario.id, file: anexo, userId: proprietario.user_id });
+      }
+    }
+
     saveDatabase();
     logAction(event.sender.id, proprietario.userId, proprietario.userName, 'Edição', `Editou proprietário: ${proprietario.nome}`);
     
@@ -539,17 +564,40 @@ ipcMain.handle('proprietarios:update', async (event, proprietario) => {
 
 ipcMain.handle('proprietarios:delete', async (event, { id, userId, userName }) => {
   try {
-    const result = db.exec('SELECT nome FROM proprietarios WHERE id = ?', [id]);
+    db.exec('PRAGMA foreign_keys = ON;');
+    console.log(`[proprietarios:delete] Attempting to delete proprietario with ID: ${id}`);
+
+    // Get proprietario info before deleting
+    const result = db.exec('SELECT nome, pasta_path FROM proprietarios WHERE id = ?', [id]);
     const props = resultToArray(result);
-    const nome = props[0]?.nome;
     
+    if (props.length === 0) {
+      console.warn(`[proprietarios:delete] Proprietario with ID ${id} not found.`);
+      return { success: false, error: 'Proprietário não encontrado' };
+    }
+    
+    const { nome, pasta_path } = props[0];
+
+    // Delete from database (CASCADE should handle related entities)
     db.run('DELETE FROM proprietarios WHERE id = ?', [id]);
-    
     saveDatabase();
+    console.log(`[proprietarios:delete] Database record for ${nome} (ID: ${id}) deleted.`);
+
+    // Delete proprietario's folder from filesystem
+    if (pasta_path) {
+      const fullPath = path.join(rootPath, pasta_path);
+      if (fs.existsSync(fullPath)) {
+        console.log(`[proprietarios:delete] Deleting folder: ${fullPath}`);
+        fs.rmSync(fullPath, { recursive: true, force: true });
+        console.log(`[proprietarios:delete] Folder for ${nome} deleted successfully.`);
+      }
+    }
+
     logAction(event.sender.id, userId, userName, 'Exclusão', `Excluiu proprietário: ${nome}`);
     
     return { success: true };
   } catch (error) {
+    console.error(`[proprietarios:delete] Error deleting proprietario with ID ${id}:`, error);
     return { success: false, error: error.message };
   }
 });

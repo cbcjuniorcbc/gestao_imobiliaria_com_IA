@@ -53,31 +53,25 @@ const NovoProprietario = () => {
     
     try {
       if (window.electronAPI?.createProprietario) {
+        const anexos = [];
+
+        for (const file of documentos) {
+          const arrayBuffer = await file.arrayBuffer();
+          anexos.push({
+            name: file.name,
+            data: Array.from(new Uint8Array(arrayBuffer)),
+            type: 'documento' // Proprietarios only have 'documento' type attachments
+          });
+        }
+
         const result = await (window.electronAPI as any).createProprietario({
           ...formData,
           user_id: user?.id,
-          user_name: user?.username
+          user_name: user?.username,
+          anexos: anexos // Include anexos in the main object
         });
 
         if (result.success) {
-          const proprietarioId = result.id;
-
-          // Upload dos documentos se houver
-          if (documentos.length > 0 && window.electronAPI?.uploadDocumento) {
-            for (const file of documentos) {
-              const fileData = await file.arrayBuffer();
-              await (window.electronAPI as any).uploadDocumento({
-                ownerType: 'proprietario',
-                ownerId: proprietarioId,
-                file: {
-                  name: file.name,
-                  data: Array.from(new Uint8Array(fileData))
-                },
-                userId: user?.id
-              });
-            }
-          }
-
           toast.success("Proprietário cadastrado com sucesso!");
           navigate("/proprietarios");
         } else {

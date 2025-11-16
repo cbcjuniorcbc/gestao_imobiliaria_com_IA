@@ -17,6 +17,7 @@ export interface Proprietario {
   metodo_recebimento?: string;
   observacoes?: string;
   pasta_path: string;
+  documentos?: Documento[]; // Added for attachments
   criado_em: string;
 }
 

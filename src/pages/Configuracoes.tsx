@@ -291,7 +291,9 @@ const Configuracoes = () => {
                           }
                           
                           if (window.confirm(`Tem certeza que deseja excluir o usuário ${usuario.username}?`)) {
+                            console.log(`[Configuracoes] Attempting to delete user with ID: ${usuario.id}`);
                             const result = await (window.electronAPI as any).deleteUsuario({ userId: usuario.id });
+                            console.log(`[Configuracoes] Result from deleteUsuario for ID ${usuario.id}:`, result);
                             if (result.success) {
                               toast({
                                 title: 'Sucesso',

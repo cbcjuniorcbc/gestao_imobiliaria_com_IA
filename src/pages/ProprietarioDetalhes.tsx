@@ -22,21 +22,18 @@ const ProprietarioDetalhes = () => {
   }, [id]);
 
   const loadData = async () => {
-    if (window.electronAPI?.getProprietarios && window.electronAPI?.getImoveisByProprietario && window.electronAPI?.getDocumentosByOwner) {
-      const propResult = await window.electronAPI.getProprietarios();
-      if (propResult.success) {
-        const prop = propResult.data.find((p: Proprietario) => p.id === id);
-        setProprietario(prop || null);
+    if (window.electronAPI?.getProprietarioById && window.electronAPI?.getImoveisByProprietario) {
+      const propResult = await window.electronAPI.getProprietarioById(id);
+      if (propResult.success && propResult.data) {
+        setProprietario(propResult.data);
+        setDocumentos(propResult.data.documentos || []);
+      } else {
+        toast.error(propResult.error || "Erro ao carregar proprietário");
       }
 
       const imoveisResult = await window.electronAPI.getImoveisByProprietario(id);
       if (imoveisResult.success) {
         setImoveis(imoveisResult.data);
-      }
-
-      const docsResult = await window.electronAPI.getDocumentosByOwner({ ownerType: 'proprietario', ownerId: id || '' });
-      if (docsResult.success) {
-        setDocumentos(docsResult.data);
       }
     } else {
       // Fallback para mock
