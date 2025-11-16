@@ -38,28 +38,38 @@ const InquilinoDetalhes = () => {
   }, [id]);
 
   const loadData = async () => {
-    if (window.electronAPI) {
-      const inquilinoResult = await (window.electronAPI as any).getInquilinoById(id);
-      if (inquilinoResult.success && inquilinoResult.data) {
-        setInquilino(inquilinoResult.data);
-      }
+    console.log("[InquilinoDetalhes] loadData called for ID:", id);
+    setLoading(true); // Set loading to true at the start
+    try {
+      if (window.electronAPI) {
+        const inquilinoResult = await (window.electronAPI as any).getInquilinoById(id);
+        if (inquilinoResult.success && inquilinoResult.data) {
+          setInquilino(inquilinoResult.data);
+        }
 
-      const boletosResult = await (window.electronAPI as any).getBoletosByInquilino(id);
-      if (boletosResult.success) {
-        setBoletos(boletosResult.data);
-      }
+        console.log("[InquilinoDetalhes] Calling getBoletosByInquilino with ID:", id);
+        const boletosResult = await (window.electronAPI as any).getBoletosByInquilino(id);
+        console.log("[InquilinoDetalhes] Result from getBoletosByInquilino:", boletosResult);
+        if (boletosResult.success) {
+          setBoletos(boletosResult.data);
+        }
 
-      const docsResult = await (window.electronAPI as any).getDocumentosByOwner({ ownerType: 'inquilino', ownerId: id });
-      if (docsResult.success) {
-        setDocumentos(docsResult.data);
+        const docsResult = await (window.electronAPI as any).getDocumentosByOwner({ ownerType: 'inquilino', ownerId: id });
+        if (docsResult.success) {
+          setDocumentos(docsResult.data);
+        }
+      } else {
+        // Fallback para mock
+        const inquilinoData = mockInquilinos.find(i => i.id === id);
+        setInquilino(inquilinoData || null);
+        setBoletos(mockBoletos.filter(b => b.inquilino_id === id));
       }
-    } else {
-      // Fallback para mock
-      const inquilinoData = mockInquilinos.find(i => i.id === id);
-      setInquilino(inquilinoData || null);
-      setBoletos(mockBoletos.filter(b => b.inquilino_id === id));
+    } catch (error) {
+      console.error("[InquilinoDetalhes] Error in loadData:", error);
+      sonnerToast.error("Erro ao carregar detalhes do inquilino.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const marcarComoPago = async () => {
@@ -454,6 +464,89 @@ const InquilinoDetalhes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {boletos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Boletos ({boletos.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ação</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {boletos.map((boleto) => {
+                  const diasInfo = calcularDias(boleto.data_vencimento, boleto.situacao);
+                  const situacaoColor = boleto.situacao === 'Pago' ? 'text-green-600' :
+                                        diasInfo?.tipo === 'atrasado' ? 'text-red-600' :
+                                        boleto.situacao === 'Em aberto' ? 'text-blue-600' : 'text-yellow-600';
+                  return (
+                    <TableRow key={boleto.id}>
+                      <TableCell>{boleto.acao}</TableCell>
+                      <TableCell>R$ {boleto.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>{new Date(boleto.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className={situacaoColor}>
+                        <div className="flex items-center gap-1">
+                          {boleto.situacao === 'Pago' && <CheckCircle2 className="w-4 h-4" />}
+                          {diasInfo?.tipo === 'atrasado' && <Clock className="w-4 h-4" />}
+                          {boleto.situacao === 'Em aberto' && <FileText className="w-4 h-4" />}
+                          {boleto.situacao === 'À gerar' && <FileText className="w-4 h-4" />}
+                          <span>{boleto.situacao}</span>
+                          {diasInfo && diasInfo.tipo === 'atrasado' && ` (${diasInfo.dias} dias)`}
+                          {diasInfo && diasInfo.tipo === 'avencer' && ` (faltam ${diasInfo.dias} dias)`}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {boleto.situacao === 'À gerar' && (
+                            <Button variant="outline" size="sm" onClick={() => setBoletoToMarkGerado(boleto.id)}>
+                              Gerar
+                            </Button>
+                          )}
+                          {boleto.situacao === 'Em aberto' && (
+                            <Button size="sm" onClick={() => setBoletoToMarkPago(boleto.id)}>
+                              Pagar
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button variant="destructive" size="sm" onClick={async () => {
+                              if (window.electronAPI && user && window.confirm('Tem certeza que deseja remover este boleto?')) {
+                                const result = await (window.electronAPI as any).deleteBoleto({ 
+                                  boletoId: boleto.id, 
+                                  userId: user.id, 
+                                  userName: user.username 
+                                });
+                                if (result.success) {
+                                  sonnerToast.success('Boleto removido com sucesso!');
+                                  loadData();
+                                } else {
+                                  sonnerToast.error(result.error || 'Erro ao remover boleto');
+                                }
+                              }
+                            }}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

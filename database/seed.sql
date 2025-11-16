@@ -18,7 +18,8 @@ DELETE FROM usuarios;
 -- Configure a senha após o primeiro login
 -- ============================================
 INSERT INTO usuarios (id, username, password_hash, role) VALUES
-('1', 'admin', '', 'admin');
+('1', 'admin', '', 'admin'),
+('2', 'recep', 'senha_hash_recep', 'recepcao');
 
 -- ============================================
 -- Proprietários

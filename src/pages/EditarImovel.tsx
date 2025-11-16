@@ -46,6 +46,7 @@ const EditarImovel = () => {
       const result = await (window.electronAPI as any).getImovelById(id);
       if (result.success && result.data) {
         const imovel = result.data;
+        console.log("[EditarImovel] Loaded imovel type:", imovel.tipo); // Add this log
         setFormData({
           rua: imovel.rua || "",
           numero: imovel.numero || "",
@@ -304,8 +305,7 @@ const EditarImovel = () => {
                 </Select>
               </div>
 
-              {formData.tipo === 'Venda' && (
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
                   <Checkbox
                     id="publicado_internet"
                     checked={formData.publicado_internet}
@@ -317,7 +317,6 @@ const EditarImovel = () => {
                     Publicado na Internet
                   </Label>
                 </div>
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="observacoes">Observações</Label>

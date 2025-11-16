@@ -120,18 +120,36 @@ async function initializeDatabase() {
     if (fs.existsSync(dbPath)) {
       const buffer = fs.readFileSync(dbPath);
       db = new SQL.Database(buffer);
+      db.exec('PRAGMA foreign_keys = ON;'); // Enable foreign key enforcement for existing DB
       
       // Executar migrations para bancos existentes
       runMigrations();
     } else {
       db = new SQL.Database();
       
+      // Temporarily disable foreign key checks for schema creation
+      db.exec('PRAGMA foreign_keys = OFF;'); 
+      
       console.log('Banco vazio. Executando schema...');
       const schemaSQL = fs.readFileSync(
         path.join(__dirname, '../database/schema.sql'),
         'utf8'
       );
-      db.run(schemaSQL);
+      
+      // Split SQL into individual statements and execute one by one for better error reporting
+      const statements = schemaSQL.split(';').filter(s => s.trim().length > 0);
+      for (const stmt of statements) {
+        try {
+          db.run(stmt + ';'); // Add semicolon back for execution
+          console.log(`[Schema Init] Executed: ${stmt.substring(0, 100)}...`);
+        } catch (stmtError) {
+          console.error(`[Schema Init] Error executing statement: ${stmt.substring(0, 100)}...`, stmtError);
+          throw stmtError; // Re-throw to stop initialization
+        }
+      }
+      
+      // Re-enable foreign key checks after schema creation
+      db.exec('PRAGMA foreign_keys = ON;'); 
       
       // Executar seed data
       const seedSQL = fs.readFileSync(
@@ -626,14 +644,23 @@ ipcMain.handle('imoveis:create', async (event, imovel) => {
 
 ipcMain.handle('imoveis:update', async (event, imovel) => {
   try {
-    db.run(
-      `UPDATE imoveis SET endereco = ?, rua = ?, numero = ?, bairro = ?, cidade = ?, estado = ?, 
-       cep = ?, tipo = ?, valor = ?, publicado_internet = ?, situacao = ?, observacoes = ?
-       WHERE id = ?`,
-      [imovel.endereco, imovel.rua || '', imovel.numero || '', imovel.bairro || '', 
-       imovel.cidade || '', imovel.estado || '', imovel.cep || '', imovel.tipo, imovel.valor,
-       imovel.publicado_internet || 0, imovel.situacao, imovel.observacoes || '', imovel.id]
-    );
+    console.log(`[imoveis:update] Received imovel object for update:`, JSON.stringify(imovel));
+
+    const updateParams = [
+      imovel.endereco, imovel.rua || '', imovel.numero || '', imovel.bairro || '', 
+      imovel.cidade || '', imovel.estado || '', imovel.cep || '', imovel.tipo, imovel.valor,
+      imovel.publicado_internet ? 1 : 0, // Ensure it's 1 or 0
+      imovel.situacao, imovel.observacoes || '', imovel.id
+    ];
+
+    const updateSql = `UPDATE imoveis SET endereco = ?, rua = ?, numero = ?, bairro = ?, cidade = ?, estado = ?, 
+                       cep = ?, tipo = ?, valor = ?, publicado_internet = ?, situacao = ?, observacoes = ?
+                       WHERE id = ?`;
+    
+    console.log(`[imoveis:update] Executing SQL: ${updateSql}`);
+    console.log(`[imoveis:update] With parameters:`, JSON.stringify(updateParams));
+
+    db.run(updateSql, updateParams);
     
     // Lidar com anexos
     if (imovel.anexos && imovel.anexos.length > 0) {
@@ -643,10 +670,18 @@ ipcMain.handle('imoveis:update', async (event, imovel) => {
     }
     
     saveDatabase();
+    console.log(`[imoveis:update] Database saved after update for ID: ${imovel.id}`);
+
+    // Verify immediately after saving
+    const verifyResult = db.exec('SELECT publicado_internet FROM imoveis WHERE id = ?', [imovel.id]);
+    const verifiedPublicadoInternet = resultToArray(verifyResult)[0]?.publicado_internet;
+    console.log(`[imoveis:update] Verified 'publicado_internet' in DB after save for ID ${imovel.id}:`, verifiedPublicadoInternet);
+
     logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Edição', `Editou imóvel: ${imovel.endereco}`);
     
     return { success: true };
   } catch (error) {
+    console.error(`[imoveis:update] Error updating imovel with ID ${imovel.id}:`, error);
     return { success: false, error: error.message };
   }
 });
@@ -681,10 +716,13 @@ ipcMain.handle('inquilinos:getAll', async () => {
 
 ipcMain.handle('inquilinos:getByImovel', async (event, imovelId) => {
   try {
+    console.log(`[inquilinos:getByImovel] Received imovelId: ${imovelId}`);
     const result = db.exec('SELECT * FROM inquilinos WHERE imovel_id = ?', [imovelId]);
     const inquilinos = resultToArray(result);
+    console.log(`[inquilinos:getByImovel] Returning ${inquilinos.length} inquilinos for imovelId ${imovelId}:`, JSON.stringify(inquilinos));
     return { success: true, data: inquilinos };
   } catch (error) {
+    console.error(`[inquilinos:getByImovel] Error fetching inquilinos for imovelId ${imovelId}:`, error);
     return { success: false, error: error.message };
   }
 });
@@ -1004,10 +1042,13 @@ ipcMain.handle('boletos:getAll', async () => {
 
 ipcMain.handle('boletos:getByInquilino', async (event, inquilinoId) => {
   try {
+    console.log(`[boletos:getByInquilino] Received inquilinoId: ${inquilinoId}`);
     const result = db.exec('SELECT * FROM boletos WHERE inquilino_id = ? ORDER BY data_vencimento DESC', [inquilinoId]);
     const boletos = resultToArray(result);
+    console.log(`[boletos:getByInquilino] Returning ${boletos.length} boletos for inquilinoId ${inquilinoId}:`, JSON.stringify(boletos));
     return { success: true, data: boletos };
   } catch (error) {
+    console.error(`[boletos:getByInquilino] Error fetching boletos for inquilinoId ${inquilinoId}:`, error);
     return { success: false, error: error.message };
   }
 });

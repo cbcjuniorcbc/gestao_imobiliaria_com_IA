@@ -29,50 +29,64 @@ const ImovelDetalhes = () => {
 
   const loadData = async () => {
     console.log("[ImovelDetalhes] loadData called for ID:", id);
-    if (window.electronAPI) {
-      console.log("[ImovelDetalhes] Calling getImovelById with ID:", id);
-      const imovelResult = await (window.electronAPI as any).getImovelById(id);
-      console.log("[ImovelDetalhes] Result from getImovelById:", imovelResult);
-      if (imovelResult.success && imovelResult.data) {
-        setImovel(imovelResult.data);
-        
-        const propResult = await (window.electronAPI as any).getProprietarios();
-        if (propResult.success) {
-          const prop = propResult.data.find((p: Proprietario) => p.id === imovelResult.data.proprietario_id);
-          setProprietario(prop || null);
+    setLoading(true); // Set loading to true at the start
+    try {
+      if (window.electronAPI) {
+        console.log("[ImovelDetalhes] Calling getImovelById with ID:", id);
+        const imovelResult = await (window.electronAPI as any).getImovelById(id);
+        console.log("[ImovelDetalhes] Result from getImovelById:", imovelResult);
+        if (imovelResult.success && imovelResult.data) {
+          setImovel(imovelResult.data);
+          
+          const propResult = await (window.electronAPI as any).getProprietarios();
+          if (propResult.success) {
+            const prop = propResult.data.find((p: Proprietario) => p.id === imovelResult.data.proprietario_id);
+            setProprietario(prop || null);
+          }
+
+          // Processar anexos que já vêm no objeto imovel
+          if (imovelResult.data.anexos && imovelResult.data.anexos.length > 0) {
+            const processedAnexos = await Promise.all(
+              imovelResult.data.anexos.map(async (anexo: any) => {
+                if (anexo.file_type === 'foto') {
+                  const fotoResult = await (window.electronAPI as any).downloadImovelAnexo(anexo.id); // Use new handler
+                  if (fotoResult.success) {
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(fotoResult.data.buffer)));
+                    let mimeType = 'application/octet-stream';
+                    if (fotoResult.data.filename.endsWith('.png')) {
+                      mimeType = 'image/png';
+                    } else if (fotoResult.data.filename.endsWith('.jpg') || fotoResult.data.filename.endsWith('.jpeg')) {
+                      mimeType = 'image/jpeg';
+                    }
+                    return { ...anexo, url: `data:${mimeType};base64,${base64}` };
+                  }
+                }
+                return anexo;
+              })
+            );
+            setAnexos(processedAnexos);
+          } else {
+            setAnexos([]);
+          }
+        } else {
+          console.error("[ImovelDetalhes] Failed to load imovel or imovel data is null:", imovelResult.error);
         }
 
-        // Processar anexos que já vêm no objeto imovel
-        if (imovelResult.data.anexos && imovelResult.data.anexos.length > 0) {
-          const processedAnexos = await Promise.all(
-            imovelResult.data.anexos.map(async (anexo: any) => {
-              if (anexo.file_type === 'foto') {
-                const fotoResult = await (window.electronAPI as any).downloadImovelAnexo(anexo.id); // Use new handler
-                if (fotoResult.success) {
-                  const base64 = btoa(String.fromCharCode(...new Uint8Array(fotoResult.data.buffer)));
-                  let mimeType = 'application/octet-stream';
-                  if (fotoResult.data.filename.endsWith('.png')) {
-                    mimeType = 'image/png';
-                  } else if (fotoResult.data.filename.endsWith('.jpg') || fotoResult.data.filename.endsWith('.jpeg')) {
-                    mimeType = 'image/jpeg';
-                  }
-                  return { ...anexo, url: `data:${mimeType};base64,${base64}` };
-                }
-              }
-              return anexo;
-            })
-          );
-          setAnexos(processedAnexos);
-        } else {
-          setAnexos([]);
+        console.log("[ImovelDetalhes] Calling getInquilinosByImovel with ID:", id);
+        const inquilinosResult = await (window.electronAPI as any).getInquilinosByImovel(id);
+        console.log("[ImovelDetalhes] Result from getInquilinosByImovel:", inquilinosResult);
+        if (inquilinosResult.success) {
+          setInquilinos(inquilinosResult.data);
         }
       } else {
-        console.error("[ImovelDetalhes] Failed to load imovel or imovel data is null:", imovelResult.error);
+        console.warn("[ImovelDetalhes] window.electronAPI is not available.");
       }
-    } else {
-      console.warn("[ImovelDetalhes] window.electronAPI is not available.");
+    } catch (error) {
+      console.error("[ImovelDetalhes] Error in loadData:", error);
+      toast.error("Erro ao carregar detalhes do imóvel.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDownload = async (anexo: any) => {
