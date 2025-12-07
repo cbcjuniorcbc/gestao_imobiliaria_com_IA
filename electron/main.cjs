@@ -800,8 +800,17 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
     const imoveis = resultToArray(propResult);
     const proprietario_id = imoveis[0]?.proprietario_id;
     
+    if (!proprietario_id) {
+      return { success: false, error: 'Imóvel não encontrado ou sem proprietário vinculado' };
+    }
+    
     const propPathResult = db.exec('SELECT pasta_path FROM proprietarios WHERE id = ?', [proprietario_id]);
     const props = resultToArray(propPathResult);
+    
+    if (!props[0] || !props[0].pasta_path) {
+      return { success: false, error: 'Proprietário não encontrado ou sem pasta configurada' };
+    }
+    
     const pasta_path = `${props[0].pasta_path}/Inquilino_${inquilino.nome.replace(/\s+/g, '_')}`;
     
     // Valor padrão para dia_vencimento se não fornecido
