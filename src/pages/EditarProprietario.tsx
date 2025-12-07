@@ -35,8 +35,8 @@ const EditarProprietario = () => {
   }, [id]);
 
   const loadProprietario = async () => {
-    if (window.electronAPI?.getProprietarioById) {
-      const result = await window.electronAPI.getProprietarioById(id);
+    if (window.electronAPI) {
+      const result = await (window.electronAPI as any).getProprietarioById(id);
       if (result.success && result.data) {
         const prop = result.data;
         setFormData({
