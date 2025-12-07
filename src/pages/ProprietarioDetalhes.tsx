@@ -22,8 +22,8 @@ const ProprietarioDetalhes = () => {
   }, [id]);
 
   const loadData = async () => {
-    if (window.electronAPI?.getProprietarioById && window.electronAPI?.getImoveisByProprietario) {
-      const propResult = await window.electronAPI.getProprietarioById(id);
+    if (window.electronAPI) {
+      const propResult = await (window.electronAPI as any).getProprietarioById(id);
       if (propResult.success && propResult.data) {
         setProprietario(propResult.data);
         setDocumentos(propResult.data.documentos || []);
@@ -31,7 +31,7 @@ const ProprietarioDetalhes = () => {
         toast.error(propResult.error || "Erro ao carregar proprietário");
       }
 
-      const imoveisResult = await window.electronAPI.getImoveisByProprietario(id);
+      const imoveisResult = await (window.electronAPI as any).getImoveisByProprietario(id);
       if (imoveisResult.success) {
         setImoveis(imoveisResult.data);
       }

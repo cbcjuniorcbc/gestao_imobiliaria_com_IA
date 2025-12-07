@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download, Edit, Trash2, FileCheck } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText, CheckCircle2, Clock, Download, Edit, Trash2, FileCheck, User } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Inquilino, Boleto, Documento } from '@/types';
+import { Inquilino, Boleto, Documento, Proprietario, Imovel } from '@/types';
 import { mockInquilinos, mockBoletos } from '@/lib/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -27,6 +27,8 @@ const InquilinoDetalhes = () => {
   const [inquilino, setInquilino] = useState<Inquilino | null>(null);
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [proprietario, setProprietario] = useState<Proprietario | null>(null);
+  const [imovel, setImovel] = useState<Imovel | null>(null);
   const [loading, setLoading] = useState(true);
   const [boletoToMarkGerado, setBoletoToMarkGerado] = useState<string | null>(null);
   const [boletoToMarkPago, setBoletoToMarkPago] = useState<string | null>(null);
@@ -39,12 +41,29 @@ const InquilinoDetalhes = () => {
 
   const loadData = async () => {
     console.log("[InquilinoDetalhes] loadData called for ID:", id);
-    setLoading(true); // Set loading to true at the start
+    setLoading(true);
     try {
       if (window.electronAPI) {
         const inquilinoResult = await (window.electronAPI as any).getInquilinoById(id);
         if (inquilinoResult.success && inquilinoResult.data) {
           setInquilino(inquilinoResult.data);
+          
+          // Buscar imóvel e proprietário
+          if (inquilinoResult.data.imovel_id) {
+            const imovelResult = await (window.electronAPI as any).getImovelById(inquilinoResult.data.imovel_id);
+            if (imovelResult.success && imovelResult.data) {
+              setImovel(imovelResult.data);
+              
+              // Buscar proprietário do imóvel
+              if (imovelResult.data.proprietario_id) {
+                const propResult = await (window.electronAPI as any).getProprietarios();
+                if (propResult.success) {
+                  const prop = propResult.data.find((p: Proprietario) => p.id === imovelResult.data.proprietario_id);
+                  setProprietario(prop || null);
+                }
+              }
+            }
+          }
         }
 
         console.log("[InquilinoDetalhes] Calling getBoletosByInquilino with ID:", id);
@@ -337,6 +356,25 @@ const InquilinoDetalhes = () => {
               <p className="mt-1">{inquilino.observacoes}</p>
             </div>
           )}
+          
+          {proprietario && (
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Proprietário</p>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto font-semibold text-lg"
+                    onClick={() => navigate(`/proprietarios/${proprietario.id}`)}
+                  >
+                    {proprietario.nome}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="flex gap-3 pt-4 border-t">
             <Button onClick={() => navigate(`/inquilinos/${id}/boleto/novo`)} className="flex-1">
               <FileText className="w-4 h-4 mr-2" />
@@ -552,21 +590,3 @@ const InquilinoDetalhes = () => {
 };
 
 export default InquilinoDetalhes;
-
-const handleDeleteDocument = async (documentoId: string, filename: string) => {
-  if (!window.electronAPI || !window.confirm(`Tem certeza que deseja deletar o documento "${filename}"?`)) return;
-
-  try {
-    const result = await (window.electronAPI as any).deleteDocumento(documentoId);
-    if (result.success) {
-      sonnerToast.success(`Documento "${filename}" deletado com sucesso!`);
-      // Reload documents after deletion
-      loadData(); // Assuming loadData is accessible here, or pass it as a prop/callback
-    } else {
-      sonnerToast.error(result.error || 'Erro ao deletar documento');
-    }
-  } catch (error) {
-    console.error('Erro ao deletar documento:', error);
-    sonnerToast.error('Erro ao deletar documento');
-  }
-};
