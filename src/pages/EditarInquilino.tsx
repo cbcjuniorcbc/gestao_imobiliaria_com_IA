@@ -115,7 +115,7 @@ const EditarInquilino = () => {
             }
           }
 
-          toast.success("Inquilino atualizado com sucesso!");
+          toast.success(result.message || "Inquilino atualizado com sucesso!");
           navigate(`/inquilinos/${id}`);
         } else {
           toast.error(result.error || "Erro ao atualizar inquilino");

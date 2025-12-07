@@ -554,9 +554,9 @@ ipcMain.handle('proprietarios:update', async (event, proprietario) => {
     }
 
     saveDatabase();
-    logAction(event.sender.id, proprietario.userId, proprietario.userName, 'Edição', `Editou proprietário: ${proprietario.nome}`);
+    logAction(event.sender.id, proprietario.user_id, proprietario.user_name, 'Edição', `Editou proprietário: ${proprietario.nome}`);
     
-    return { success: true };
+    return { success: true, message: 'Proprietário atualizado com sucesso!' };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -727,7 +727,7 @@ ipcMain.handle('imoveis:update', async (event, imovel) => {
 
     logAction(event.sender.id, imovel.user_id, imovel.user_name, 'Edição', `Editou imóvel: ${imovel.endereco}`);
     
-    return { success: true };
+    return { success: true, message: 'Imóvel atualizado com sucesso!' };
   } catch (error) {
     console.error(`[imoveis:update] Error updating imovel with ID ${imovel.id}:`, error);
     return { success: false, error: error.message };
@@ -891,9 +891,9 @@ ipcMain.handle('inquilinos:update', async (event, inquilino) => {
     }
     
     saveDatabase();
-    logAction(event.sender.id, inquilino.userId, inquilino.userName, 'Edição', `Editou inquilino: ${inquilino.nome}`);
+    logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Edição', `Editou inquilino: ${inquilino.nome}`);
     
-    return { success: true };
+    return { success: true, message: 'Inquilino atualizado com sucesso!' };
   } catch (error) {
     return { success: false, error: error.message };
   }

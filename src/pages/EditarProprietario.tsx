@@ -147,7 +147,7 @@ const EditarProprietario = () => {
         });
 
         if (result.success) {
-          toast.success("Proprietário atualizado com sucesso!");
+          toast.success(result.message || "Proprietário atualizado com sucesso!");
           navigate(`/proprietarios/${id}`);
         } else {
           toast.error(result.error || "Erro ao atualizar proprietário");

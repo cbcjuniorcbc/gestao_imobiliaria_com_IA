@@ -59,7 +59,9 @@ const ImovelDetalhes = () => {
                 try {
                   const fotoResult = await (window.electronAPI as any).downloadImovelAnexo(anexo.id);
                   if (fotoResult.success) {
-                    const base64 = btoa(String.fromCharCode(...new Uint8Array(fotoResult.data.buffer)));
+                    const base64 = btoa(
+                    new Uint8Array(fotoResult.data.buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                  );
                     let mimeType = 'application/octet-stream';
                     if (fotoResult.data.filename.endsWith('.png')) {
                       mimeType = 'image/png';

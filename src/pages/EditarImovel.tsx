@@ -145,7 +145,7 @@ const EditarImovel = () => {
         });
 
         if (result.success) {
-          toast.success("Imóvel atualizado com sucesso!");
+          toast.success(result.message || "Imóvel atualizado com sucesso!");
           navigate(`/imoveis/${id}`);
         } else {
           toast.error(result.error || "Erro ao atualizar imóvel");
