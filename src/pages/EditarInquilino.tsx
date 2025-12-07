@@ -92,8 +92,18 @@ const EditarInquilino = () => {
       if (window.electronAPI) {
         const result = await (window.electronAPI as any).updateInquilino({
           id,
-          ...formData,
+          nome: formData.nome || "",
+          cpf: formData.cpf || "",
+          rg: formData.rg || "",
+          cpf_cnpj: formData.cpf_cnpj || "",
+          telefone: formData.telefone || "",
+          email: formData.email || "",
           renda_aproximada: formData.renda_aproximada ? parseFloat(formData.renda_aproximada) : null,
+          data_inicio: formData.data_inicio || "",
+          data_termino: formData.data_termino || null,
+          dia_vencimento: formData.dia_vencimento ? parseInt(formData.dia_vencimento) : 10,
+          status: formData.status || "Ativo",
+          observacoes: formData.observacoes || "",
           userId: user?.id,
           userName: user?.username
         });

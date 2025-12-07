@@ -850,52 +850,84 @@ ipcMain.handle('inquilinos:create', async (event, inquilino) => {
   }
 });
 
-ipcMain.handle('inquilinos:update', async (event, inquilino) => {
+ipcMain.handle('inquilinos:update', async (event, inquilinoData) => {
+  console.log('[inquilinos:update] Recebido para atualização:', inquilinoData);
+  const { id, userId, userName, ...fieldsToUpdate } = inquilinoData;
+
+  if (!id) {
+    return { success: false, error: 'ID do inquilino não fornecido.' };
+  }
+
   try {
-    // Obter dia_vencimento antigo
-    const oldData = db.exec('SELECT dia_vencimento FROM inquilinos WHERE id = ?', [inquilino.id]);
-    const oldDiaVencimento = resultToArray(oldData)[0]?.dia_vencimento;
-    
-    db.run(
-      `UPDATE inquilinos SET nome = ?, cpf = ?, rg = ?, cpf_cnpj = ?, telefone = ?, email = ?,
-       renda_aproximada = ?, data_inicio = ?, data_termino = ?, dia_vencimento = ?, status = ?, observacoes = ?
-       WHERE id = ?`,
-      [inquilino.nome, inquilino.cpf || '', inquilino.rg || '', inquilino.cpf_cnpj, 
-       inquilino.telefone, inquilino.email, inquilino.renda_aproximada, inquilino.data_inicio,
-       inquilino.data_termino || null, inquilino.dia_vencimento || 10, inquilino.status || 'Ativo',
-       inquilino.observacoes || '', inquilino.id]
-    );
-    
-    // Se o dia_vencimento mudou, atualizar apenas boletos futuros
-    if (inquilino.dia_vencimento && oldDiaVencimento !== inquilino.dia_vencimento) {
-      const hoje = new Date();
-      const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
-      const proximoMesStr = `${proximoMes.getFullYear()}-${String(proximoMes.getMonth() + 1).padStart(2, '0')}-01`;
-      
-      // Atualizar vencimentos dos boletos a partir do próximo mês
-      const boletosResult = db.exec(
-        `SELECT id, data_vencimento FROM boletos 
-         WHERE inquilino_id = ? AND data_vencimento >= ? AND situacao IN ('À gerar', 'Em aberto')`,
-        [inquilino.id, proximoMesStr]
-      );
-      
-      const boletos = resultToArray(boletosResult);
-      boletos.forEach(boleto => {
-        const dataVenc = new Date(boleto.data_vencimento + 'T00:00:00');
-        const ano = dataVenc.getFullYear();
-        const mes = dataVenc.getMonth();
-        const novaDataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(inquilino.dia_vencimento).padStart(2, '0')}`;
-        db.run('UPDATE boletos SET data_vencimento = ? WHERE id = ?', 
-               [novaDataStr, boleto.id]);
-      });
+    const oldInquilinoResult = db.exec('SELECT * FROM inquilinos WHERE id = ?', [id]);
+    const oldInquilino = resultToArray(oldInquilinoResult)[0];
+
+    if (!oldInquilino) {
+      return { success: false, error: 'Inquilino não encontrado.' };
     }
+
+    const updates = [];
+    const params = [];
+
+    for (const key in fieldsToUpdate) {
+      if (Object.prototype.hasOwnProperty.call(fieldsToUpdate, key)) {
+        let newValue = fieldsToUpdate[key];
+        let oldValue = oldInquilino[key];
+        
+        // Garantir que undefined nunca seja passado ao bind
+        if (newValue === undefined) {
+          continue;
+        }
+        
+        if (key === 'renda_aproximada') {
+          newValue = newValue ? parseFloat(newValue) : null;
+          oldValue = oldValue ? parseFloat(oldValue) : null;
+        }
+        
+        if (key === 'dia_vencimento') {
+          newValue = newValue ? parseInt(newValue) : 10;
+          oldValue = oldValue ? parseInt(oldValue) : 10;
+        }
+
+        if (newValue !== oldValue) {
+          console.log(`[inquilinos:update] Campo '${key}' alterado de '${oldValue}' para '${newValue}'`);
+          updates.push(`${key} = ?`);
+          params.push(newValue);
+        }
+      }
+    }
+
+    if (updates.length === 0) {
+      console.log('[inquilinos:update] Nenhum campo para atualizar.');
+      return { success: true, message: 'Nenhuma alteração para salvar.' };
+    }
+
+    params.push(id);
+    const sql = `UPDATE inquilinos SET ${updates.join(', ')} WHERE id = ?`;
     
+    console.log('[inquilinos:update] Executando SQL:', sql);
+    console.log('[inquilinos:update] com Parâmetros:', params);
+
+    db.run(sql, params);
+
     saveDatabase();
-    logAction(event.sender.id, inquilino.user_id, inquilino.user_name, 'Edição', `Editou inquilino: ${inquilino.nome}`);
-    
+    logAction(event.sender.id, userId, userName, 'Edição', `Editou inquilino: ${fieldsToUpdate.nome || oldInquilino.nome}`);
+
     return { success: true, message: 'Inquilino atualizado com sucesso!' };
+
   } catch (error) {
-    return { success: false, error: error.message };
+    console.error('[inquilinos:update] Erro ao atualizar inquilino:', error);
+    let errorMessage = 'Ocorreu um erro desconhecido ao atualizar o inquilino.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+
+    if (errorMessage.includes('UNIQUE constraint failed')) {
+      return { success: false, error: 'O CPF/CNPJ informado já está em uso por outro inquilino.' };
+    }
+    return { success: false, error: errorMessage };
   }
 });
 
