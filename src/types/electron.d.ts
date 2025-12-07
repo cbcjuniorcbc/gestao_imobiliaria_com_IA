@@ -57,6 +57,7 @@ declare global {
       // Logs
       getLogs: () => Promise<any>;
       getLogsByDateRange: (startDate: string, endDate: string) => Promise<any>;
+      clearLogs: () => Promise<any>;
       
       // Database status
       getDatabaseStatus: () => Promise<any>;

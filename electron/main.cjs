@@ -1369,6 +1369,19 @@ ipcMain.handle('logs:getByDateRange', async (event, { startDate, endDate }) => {
   }
 });
 
+// Limpar todos os logs
+ipcMain.handle('logs:clear', async (event) => {
+  try {
+    db.run('DELETE FROM logs_acoes');
+    saveDatabase();
+    console.log('[logs:clear] Todos os logs foram deletados com sucesso');
+    return { success: true, message: 'Histórico de logs deletado com sucesso!' };
+  } catch (error) {
+    console.error('[logs:clear] Erro ao deletar logs:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Verificar status do banco (se está em modo somente leitura)
 ipcMain.handle('database:getStatus', async () => {
   try {

@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Logs
   getLogs: () => ipcRenderer.invoke('logs:getAll'),
   getLogsByDateRange: (startDate, endDate) => ipcRenderer.invoke('logs:getByDateRange', { startDate, endDate }),
+  clearLogs: () => ipcRenderer.invoke('logs:clear'),
   
   // Database status
   getDatabaseStatus: () => ipcRenderer.invoke('database:getStatus'),

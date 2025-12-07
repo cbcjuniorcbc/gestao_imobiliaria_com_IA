@@ -4,9 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Calendar } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Log {
   id: string;
@@ -23,6 +33,8 @@ const Relatorios = () => {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'hoje' | 'semana' | 'mes'>('hoje');
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -97,6 +109,27 @@ const Relatorios = () => {
     return logs.filter(log => log.acao === action).length;
   };
 
+  const handleClearLogs = async () => {
+    setClearing(true);
+    try {
+      if (window.electronAPI) {
+        const result = await (window.electronAPI as any).clearLogs();
+        if (result.success) {
+          toast.success('Histórico de logs deletado com sucesso!');
+          setShowClearDialog(false);
+          loadLogs();
+        } else {
+          toast.error(result.error || 'Erro ao deletar histórico de logs');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao deletar logs:', error);
+      toast.error('Erro ao deletar histórico de logs');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
       <header className="bg-card border-b shadow-sm sticky top-0 z-10">
@@ -115,20 +148,31 @@ const Relatorios = () => {
 
       <main className="container mx-auto px-4 py-8 space-y-6">
         <Tabs defaultValue="hoje" onValueChange={(v) => setFilter(v as any)}>
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="hoje">
-              <Calendar className="w-4 h-4 mr-2" />
-              Hoje
-            </TabsTrigger>
-            <TabsTrigger value="semana">
-              <Calendar className="w-4 h-4 mr-2" />
-              Semana
-            </TabsTrigger>
-            <TabsTrigger value="mes">
-              <Calendar className="w-4 h-4 mr-2" />
-              Mês
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="hoje">
+                <Calendar className="w-4 h-4 mr-2" />
+                Hoje
+              </TabsTrigger>
+              <TabsTrigger value="semana">
+                <Calendar className="w-4 h-4 mr-2" />
+                Semana
+              </TabsTrigger>
+              <TabsTrigger value="mes">
+                <Calendar className="w-4 h-4 mr-2" />
+                Mês
+              </TabsTrigger>
+            </TabsList>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowClearDialog(true)}
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Limpar Histórico
+            </Button>
+          </div>
 
           <TabsContent value={filter} className="space-y-6 mt-6">
             {/* Resumo de ações */}
@@ -216,6 +260,27 @@ const Relatorios = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Limpar Histórico de Logs</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar TODOS os logs do sistema? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleClearLogs}
+                disabled={clearing}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {clearing ? 'Deletando...' : 'Deletar Tudo'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
