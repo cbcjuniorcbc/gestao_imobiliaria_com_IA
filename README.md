@@ -291,6 +291,6 @@ Para dúvidas sobre:
 
 ---
 
-**Versão**: 1.0.0  
-**Última atualização**: Novembro 2024  
+**Versão**: 1.0.0
 **Desenvolvido com**: ❤️ e ☕
+**Orquestrado por**: Cleber Junior
